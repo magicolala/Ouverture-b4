@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Board } from './components/Board';
+import { EvalBar } from './components/EvalBar';
 import { LichessStats } from './components/LichessStats';
 import { REPERTOIRE, RepertoireLine, MoveAnnotation } from './data/repertoire';
 import { getRankData } from './lib/progression';
@@ -10,6 +11,7 @@ import { auth, loginWithGoogle, logout, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { playMoveSound, playCaptureSound, playCastleSound, playErrorSound, playSuccessSound } from './lib/sounds';
+import { useStockfish } from './lib/useStockfish';
 
 type ViewMode = 'landing' | 'study' | 'train' | 'leaderboard';
 const LOCAL_STORAGE_KEY = 'rickchess_stats';
@@ -34,6 +36,10 @@ export default function App() {
 
   // Board State
   const [boardOrientation, setBoardOrientation] = useState<'white'|'black'>('white');
+  const [stockfishEnabled, setStockfishEnabled] = useState(false);
+  
+  // Initialize Stockfish Hook
+  const { evalScore, mate } = useStockfish(game.fen(), stockfishEnabled);
 
   // Load from local storage immediately
   useEffect(() => {
@@ -563,7 +569,8 @@ export default function App() {
           {/* MIDDLE COLUMN: Chess board */}
           <div className="lg:col-span-5 flex flex-col items-center">
             <div className="w-full max-w-[500px]">
-              <div className="bg-white border-[3px] border-black p-2 sm:p-4 rounded-3xl shadow-[6px_6px_0_0_#111] sm:shadow-[8px_8px_0_0_#111] mb-6 relative">
+              <div className="bg-white border-[3px] border-black p-2 sm:p-4 rounded-3xl shadow-[6px_6px_0_0_#111] sm:shadow-[8px_8px_0_0_#111] mb-6 relative ml-[24px] sm:ml-[36px]">
+                {stockfishEnabled && <EvalBar evalScore={evalScore} mate={mate} orientation={boardOrientation} />}
                 <Board 
                   game={game} 
                   orientation={boardOrientation}
@@ -580,18 +587,27 @@ export default function App() {
                 />
               </div>
               
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 ml-[24px] sm:ml-[36px]">
                  <button 
                    onClick={() => setBoardOrientation(o => o === 'white' ? 'black' : 'white')}
-                   className="w-full bg-white border-[3px] border-black rounded-full px-4 py-3 font-heading font-extrabold text-sm uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2"
+                   className="flex-1 bg-white border-[3px] border-black rounded-full px-2 py-3 font-heading font-extrabold text-[10px] sm:text-xs uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2"
                  >
-                   <span>⬇️ Retouner le plateau ⬆️</span>
+                   <span>⬇️ Retourner</span>
+                 </button>
+                 <button 
+                   onClick={() => setStockfishEnabled(s => !s)}
+                   className={cn(
+                     "flex-1 border-[3px] border-black rounded-full px-2 py-3 font-heading font-extrabold text-[10px] sm:text-xs uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2",
+                     stockfishEnabled ? "bg-[#3B82F6] text-white" : "bg-white text-black hover:bg-gray-100"
+                   )}
+                 >
+                   <span>{stockfishEnabled ? '🤖 Stop Eval' : '🤖 Activer Eval'}</span>
                  </button>
               </div>
 
               {/* STUDY Board Controls */}
               {mode === 'study' && activeLine && (
-                <div className="flex justify-between items-center bg-white border-[3px] border-black rounded-full p-2 shadow-[4px_4px_0_0_#111]">
+                <div className="flex justify-between items-center bg-white border-[3px] border-black rounded-full p-2 shadow-[4px_4px_0_0_#111] ml-[24px] sm:ml-[36px]">
                   <button onClick={() => setMoveIdx(0)} disabled={moveIdx === 0} className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center font-black text-lg sm:text-xl rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors">⏮</button>
                   <button onClick={() => setMoveIdx(m => Math.max(0, m - 1))} disabled={moveIdx === 0} className="px-3 sm:px-6 h-10 sm:h-14 font-heading font-extrabold uppercase rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors text-[10px] sm:text-sm">Précédent</button>
                   <button onClick={() => setMoveIdx(m => Math.min(activeLine.moves.length, m + 1))} disabled={moveIdx >= activeLine.moves.length} className="px-3 sm:px-6 h-10 sm:h-14 font-heading font-extrabold text-white bg-black uppercase rounded-full hover:bg-gray-800 transition-colors disabled:opacity-30 text-[10px] sm:text-sm">Suivant</button>
@@ -698,6 +714,24 @@ export default function App() {
                 </div>
 
                 <LichessStats fen={game.fen()} />
+
+                {/* STOCKFISH PANEL */}
+                {stockfishEnabled && (
+                  <div className="bg-[#111] text-white border-[3px] border-black rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-[4px_4px_0_0_#FFF] sm:shadow-[6px_6px_0_0_#eab308]">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Évaluation Moteur</div>
+                      <div className="text-xs bg-[#2a2a2a] px-2 py-1 rounded text-green-400 font-mono">
+                        {mate !== null ? `MATE ${mate}` : (evalScore > 0 ? '+' : '') + evalScore.toFixed(2)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[9px] uppercase font-bold tracking-widest text-[#EC4899] mb-1">Meilleur Coup</div>
+                      <div className="font-mono font-bold text-lg sm:text-xl text-[#FCE300]">
+                        {bestMove || "Calcul..."}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Move list */}
                 <div className="flex-1 bg-[#fdfaf6] border-[3px] border-black rounded-xl p-3 sm:p-4 overflow-y-auto shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] min-h-[200px] custom-scrollbar">

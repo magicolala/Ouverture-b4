@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 
 export function LichessStats({ fen }: { fen: string }) {
-  const [stats, setStats] = useState<{ white: number, draws: number, black: number, total: number } | null>(null);
+  const [stats, setStats] = useState<{ 
+    white: number, 
+    draws: number, 
+    black: number, 
+    total: number,
+    moves: { san: string, white: number, draws: number, black: number, total: number }[]
+  } | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -20,7 +26,14 @@ export function LichessStats({ fen }: { fen: string }) {
         if (isMounted) {
           const total = data.white + data.draws + data.black;
           if (total > 0) {
-             setStats({ white: data.white, draws: data.draws, black: data.black, total });
+             const moves = (data.moves || []).map((m: any) => ({
+               san: m.san,
+               white: m.white,
+               draws: m.draws,
+               black: m.black,
+               total: m.white + m.draws + m.black
+             }));
+             setStats({ white: data.white, draws: data.draws, black: data.black, total, moves });
           } else {
              setStats(null);
           }
@@ -48,7 +61,11 @@ export function LichessStats({ fen }: { fen: string }) {
           <div className="flex justify-between items-baseline mb-2 border-b-2 border-dashed border-black/5 pb-1">
             <div className="h-3 w-1/3 bg-gray-200 rounded"></div>
           </div>
-          <div className="h-6 w-full bg-gray-200 rounded-full"></div>
+          <div className="h-6 w-full bg-gray-200 rounded-full mb-3"></div>
+          <div className="space-y-2">
+            <div className="h-4 w-full bg-gray-100 rounded"></div>
+            <div className="h-4 w-5/6 bg-gray-100 rounded"></div>
+          </div>
        </div>
      );
   }
@@ -67,16 +84,21 @@ export function LichessStats({ fen }: { fen: string }) {
   const dPct = (stats.draws / stats.total) * 100;
   const bPct = (stats.black / stats.total) * 100;
 
+  // Filter top moves (max 3)
+  const topMoves = stats.moves.slice(0, 3);
+
   return (
     <div className="bg-white border-[3px] border-black p-3 pt-2 rounded-2xl shadow-[4px_4px_0_0_#111] mb-4 sm:mb-6 shrink-0 transition-opacity animate-in fade-in">
       <div className="flex justify-between items-baseline mb-2 border-b-2 border-dashed border-black/10 pb-1">
         <span className="text-[10px] uppercase font-black tracking-widest text-[#3B82F6] flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse"></span>
-          Base Lichess
+          Base Lichess (Probabilités Humaines)
         </span>
         <span className="text-[10px] uppercase tracking-widest font-bold text-gray-500">{formatNumber(stats.total)} parties</span>
       </div>
-      <div className="h-6 w-full rounded-full border-2 border-black flex overflow-hidden font-bold text-[10px] sm:text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] relative">
+      
+      {/* Global Win/Loss logic */}
+      <div className="h-6 w-full rounded-full border-2 border-black flex overflow-hidden font-bold text-[10px] sm:text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] relative mb-1">
         {wPct > 0 && (
           <div title={`Blancs: ${Math.round(wPct)}%`} className="bg-white flex items-center justify-center text-black" style={{ width: `${wPct}%`, borderRight: dPct > 0 || bPct > 0 ? '2px solid black' : 'none' }}>
             {wPct > 8 && `${Math.round(wPct)}%`}
@@ -92,14 +114,31 @@ export function LichessStats({ fen }: { fen: string }) {
             {bPct > 8 && `${Math.round(bPct)}%`}
           </div>
         )}
-        
-        {/* Helper tooltips overlay via standard title attributes above */}
       </div>
-      <div className="flex justify-between mt-1 px-1">
+      <div className="flex justify-between px-1 mb-3">
         <span className="text-[9px] font-bold text-gray-400">Blancs</span>
         <span className="text-[9px] font-bold text-gray-400">Nul</span>
         <span className="text-[9px] font-bold text-gray-400">Noirs</span>
       </div>
+
+      {/* Probability moves */}
+      {topMoves.length > 0 && (
+        <div className="space-y-1.5">
+          <div className="text-[9px] uppercase font-bold tracking-widest text-gray-500 mb-1 border-b-[1px] border-black/10 pb-1">Les choix fréquents :</div>
+          {topMoves.map((m, i) => {
+            const movePct = (m.total / stats.total) * 100;
+            return (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span className="font-mono font-bold w-12">{m.san}</span>
+                <div className="flex-1 bg-gray-100 h-3 rounded-full border border-black/20 overflow-hidden relative">
+                   <div className="h-full bg-[#EAB308] transition-all" style={{ width: `${Math.max(2, movePct)}%` }}></div>
+                </div>
+                <span className="font-black text-[10px] w-9 text-right text-gray-600">{Math.round(movePct)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
