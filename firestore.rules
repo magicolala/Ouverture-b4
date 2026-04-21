@@ -16,16 +16,18 @@ service cloud.firestore {
     
     // UserStats Validation logic
     function isValidUserStats(data) {
-      return data.keys().hasAll(['good', 'bad', 'updatedAt']) 
-             && data.keys().size() == 3
+      return data.keys().hasAll(['good', 'bad', 'xp', 'updatedAt']) 
              && data.good is number
              && data.bad is number
+             && data.xp is number
+             && (!('srs' in data) || data.srs is map)
+             && (!('displayName' in data) || data.displayName is string)
+             && (!('photoURL' in data) || data.photoURL is string)
              && data.updatedAt == request.time;
     }
 
     match /users/{userId} {
-      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
-      allow list: if false; // No blanket reads, client cannot fetch all users.
+      allow read: if true; // Allows public leaderboard access
       
       allow create: if isSignedIn() 
                     && request.auth.uid == userId 
@@ -36,7 +38,7 @@ service cloud.firestore {
                     && request.auth.uid == userId 
                     && isValidId(userId)
                     && isValidUserStats(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasOnly(['good', 'bad', 'updatedAt']);
+                    && incoming().diff(existing()).affectedKeys().hasAny(['good', 'bad', 'xp', 'srs', 'displayName', 'photoURL', 'updatedAt']);
                     
       allow delete: if false;
     }

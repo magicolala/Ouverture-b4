@@ -1,13 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Chess } from 'chess.js';
 import { Board } from './components/Board';
+import { LichessStats } from './components/LichessStats';
 import { REPERTOIRE, RepertoireLine, MoveAnnotation } from './data/repertoire';
+import { getRankData } from './lib/progression';
+import { calculateSRS, SRSItem } from './lib/srs';
 import { cn } from './utils';
 import { auth, loginWithGoogle, logout, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { playMoveSound, playCaptureSound, playCastleSound, playErrorSound, playSuccessSound } from './lib/sounds';
 
-type ViewMode = 'landing' | 'study' | 'train';
+type ViewMode = 'landing' | 'study' | 'train' | 'leaderboard';
+const LOCAL_STORAGE_KEY = 'rickchess_stats';
 
 export default function App() {
   const [game, setGame] = useState(new Chess());
@@ -20,11 +25,26 @@ export default function App() {
 
   // Train Mode State
   const [trainLine, setTrainLine] = useState<RepertoireLine | null>(null);
+  const [trainLineIdx, setTrainLineIdx] = useState<number | null>(null);
   const [trainHadError, setTrainHadError] = useState(false);
-  const [trainStatus, setTrainStatus] = useState<{type: 'info'|'ready'|'success'|'error', msg: string}>({type: 'info', msg: 'Cliquez sur "Nouvelle ligne" pour commencer'});
-  const [trainStats, setTrainStats] = useState({ good: 0, bad: 0, streak: 0 });
+  const [trainStatus, setTrainStatus] = useState<{type: 'info'|'ready'|'success'|'error', msg: string}>({type: 'info', msg: 'Cliquez sur "S\'entraîner au répertoire" pour commencer'});
+  const [trainStats, setTrainStats] = useState({ good: 0, bad: 0, streak: 0, xp: 0, srs: {} as Record<number, SRSItem> });
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [hintSquare, setHintSquare] = useState<string | null>(null);
+
+  // Board State
+  const [boardOrientation, setBoardOrientation] = useState<'white'|'black'>('white');
+
+  // Load from local storage immediately
+  useEffect(() => {
+    const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (localStr) {
+      try {
+        const parsed = JSON.parse(localStr);
+        setTrainStats(s => ({ ...s, good: parsed.good || 0, bad: parsed.bad || 0, xp: parsed.xp || 0, srs: parsed.srs || {} }));
+      } catch (e) {}
+    }
+  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -36,11 +56,30 @@ export default function App() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0 }));
+          const mergedSrs = data.srs || {};
+          setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, srs: mergedSrs }));
+          // Overwrite local with cloud
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, srs: mergedSrs }));
+          // Update profile data in DB if changed
+          if (data.displayName !== currentUser.displayName || data.photoURL !== currentUser.photoURL) {
+            updateDoc(docRef, { displayName: currentUser.displayName || 'Joueur Anonyme', photoURL: currentUser.photoURL || '' });
+          }
         } else {
-          // Initialize in DB
+          // Initialize in DB from local
+          const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+          let startStats = { good: 0, bad: 0, xp: 0, srs: {} as Record<number, SRSItem> };
+          if (localStr) {
+             try { startStats = JSON.parse(localStr); } catch (e) {}
+          }
+          if (!startStats.srs) startStats.srs = {};
+          
           try {
-            await setDoc(docRef, { good: 0, bad: 0, updatedAt: serverTimestamp() });
+            await setDoc(docRef, { 
+              ...startStats, 
+              displayName: currentUser.displayName || 'Nouveau Joueur',
+              photoURL: currentUser.photoURL || '',
+              updatedAt: serverTimestamp() 
+            });
           } catch (e) {
             console.error("Could not initialize user stats", e);
           }
@@ -50,12 +89,13 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Sync stats when they change and user is logged in
-  const persistStats = useCallback(async (good: number, bad: number) => {
+  // Sync stats when they change
+  const persistStats = useCallback(async (good: number, bad: number, xp: number, srs: Record<number, SRSItem>) => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good, bad, xp, srs }));
     if (user) {
       try {
         const docRef = doc(db, 'users', user.uid);
-        await updateDoc(docRef, { good, bad, updatedAt: serverTimestamp() });
+        await updateDoc(docRef, { good, bad, xp, srs, updatedAt: serverTimestamp() });
       } catch (e) {
         console.error("Could not persist stats", e);
       }
@@ -68,15 +108,30 @@ export default function App() {
 
   const updateGameState = useCallback(() => {
     const newGame = new Chess();
+    let lastMoveObj = null;
     if (activeLine && activeMoveIndex > 0) {
       for (let i = 0; i < activeMoveIndex; i++) {
         if (activeLine.moves[i]) {
-          newGame.move(activeLine.moves[i].san);
+          lastMoveObj = newGame.move(activeLine.moves[i].san);
         }
       }
     }
     setGame(newGame);
-  }, [activeLine, activeMoveIndex]);
+
+    // Play sound if we explicitly moved forward in study mode
+    if (lastMoveObj && mode === 'study') {
+      try {
+        if (lastMoveObj.flags.includes('c') || lastMoveObj.flags.includes('e')) {
+          playCaptureSound();
+        } else if (lastMoveObj.flags.includes('k') || lastMoveObj.flags.includes('q')) {
+          playCastleSound();
+        } else {
+          playMoveSound();
+        }
+      // eslint-disable-next-line no-empty
+      } catch (e) {}
+    }
+  }, [activeLine, activeMoveIndex, mode]);
 
   useEffect(() => {
     updateGameState();
@@ -108,21 +163,48 @@ export default function App() {
 
   const currentAnnotation = activeMoveIndex > 0 && activeLine ? activeLine.moves[activeMoveIndex - 1] : undefined;
 
+  // Compute Spaced Repetition queues
+  const now = Date.now();
+  const dueReviewIds: number[] = [];
+  const newIds: number[] = [];
+  
+  REPERTOIRE.forEach((_, idx) => {
+    const item = trainStats.srs[idx];
+    if (!item) newIds.push(idx);
+    else if (item.nextReview <= now) dueReviewIds.push(idx);
+  });
+
   // --- STUDY MODE ACTIONS ---
   const handleSelectLine = (index: number) => {
     setLineIdx(index);
     setMoveIdx(0);
   };
 
-  // --- TRAIN MODE ACTIONS ---
+  // --- TRAIN MODE ACTIONS (SRS) ---
   const startTraining = () => {
-    const randomIdx = Math.floor(Math.random() * REPERTOIRE.length);
-    setTrainLine(REPERTOIRE[randomIdx]);
+    let nextIdx = -1;
+    
+    // Chessable priority: Review first, then New
+    if (dueReviewIds.length > 0) {
+      // Pick the most overdue
+      nextIdx = dueReviewIds.sort((a, b) => trainStats.srs[a].nextReview - trainStats.srs[b].nextReview)[0];
+    } else if (newIds.length > 0) {
+      // Pick a random new line
+      nextIdx = newIds[Math.floor(Math.random() * newIds.length)];
+    } else {
+      setTrainStatus({type: 'success', msg: '🎉 Tout est à jour ! Vous maîtrisez votre répertoire. Revenez plus tard !'});
+      setTrainLine(null);
+      setTrainLineIdx(null);
+      return;
+    }
+
+    setTrainLineIdx(nextIdx);
+    setTrainLine(REPERTOIRE[nextIdx]);
     setMoveIdx(0);
     setTrainHadError(false);
     setSelectedSquare(null);
     setHintSquare(null);
-    setTrainStatus({type: 'ready', msg: `« ${REPERTOIRE[randomIdx].name} » — à vous, jouez le premier coup des Blancs.`});
+    setTrainStatus({type: 'ready', msg: `« ${REPERTOIRE[nextIdx].name} » — à vous, jouez le premier coup des Blancs.`});
   };
 
   const showHint = () => {
@@ -155,11 +237,21 @@ export default function App() {
     setTimeout(() => {
       if (moveIdx + 1 >= trainLine.moves.length) {
          setTrainStatus({type: 'error', msg: 'Ligne incomplète.'});
-         setTrainStats(s => ({...s, bad: s.bad + 1}));
+         finishTraining(false);
       } else {
          playBlackResponse(moveIdx + 1, trainLine, newGame);
       }
     }, 1400);
+  };
+
+  const triggerMoveSound = (move: any) => {
+     if (move.flags.includes('c') || move.flags.includes('e')) {
+       playCaptureSound();
+     } else if (move.flags.includes('k') || move.flags.includes('q')) {
+       playCastleSound();
+     } else {
+       playMoveSound();
+     }
   };
 
   const playBlackResponse = (currentIdx: number, line: RepertoireLine, currentGame: Chess) => {
@@ -167,10 +259,12 @@ export default function App() {
     
     const blackMove = line.moves[currentIdx];
     const nextGame = new Chess(currentGame.fen());
-    nextGame.move(blackMove.san);
+    const m = nextGame.move(blackMove.san);
     setGame(nextGame);
     setMoveIdx(currentIdx + 1);
     
+    if (m) triggerMoveSound(m);
+
     if (currentIdx + 1 >= line.moves.length) {
        finishTraining(true);
     } else {
@@ -179,25 +273,43 @@ export default function App() {
   };
 
   const finishTraining = (success: boolean) => {
-    if (success && !trainHadError) {
-      setTrainStats(s => ({...s, good: s.good + 1, streak: s.streak + 1}));
-      setTrainStatus({type: 'success', msg: '🏆 Ligne complétée sans erreur ! Nouvelle ligne ?'});
+    if (trainLineIdx === null) return;
+    
+    const finalErr = trainHadError || !success;
+
+    setTrainStats(s => {
+      // 1. Calculate new SRS Item
+      const nextSrsDict = { ...s.srs };
+      nextSrsDict[trainLineIdx] = calculateSRS(s.srs[trainLineIdx], success, finalErr);
+
+      // 2. Calculate XP
+      let xpGain = finalErr ? -2 : (s.streak * 2 + 15);
+      if (success && finalErr) xpGain = 5;
+
+      return {
+        ...s,
+        good: s.good + (success && !finalErr ? 1 : 0),
+        bad: s.bad + (finalErr ? 1 : 0),
+        streak: finalErr ? 0 : s.streak + 1,
+        xp: Math.max(0, s.xp + xpGain),
+        srs: nextSrsDict,
+      };
+    });
+
+    if (success && !finalErr) {
+      playSuccessSound();
+      setTrainStatus({type: 'success', msg: '🏆 Parfait ! Ligne maîtrisée. Passez à la suite !'});
     } else if (success) {
-      setTrainStats(s => ({...s, good: s.good + 1}));
-      setTrainStatus({type: 'success', msg: '✓ Ligne complétée. Nouvelle ligne ?'});
+      setTrainStatus({type: 'success', msg: '✓ Terminé, mais avec des erreurs. À revoir bientôt !'});
     } else {
-      setTrainStats(s => ({...s, bad: s.bad + 1, streak: 0}));
-      setTrainStatus({type: 'error', msg: 'Ligne incomplète.'});
+      setTrainStatus({type: 'error', msg: 'Ligne ratée, l\'intervalle de révision a été réinitialisé.'});
     }
   };
 
   useEffect(() => {
-    // When trainStats change, persist if user is logged in
-    // To avoid loop, persistStats checks user inside
-    if (user) {
-      persistStats(trainStats.good, trainStats.bad);
-    }
-  }, [trainStats.good, trainStats.bad, user, persistStats]);
+    // When trainStats change, persist (local & cloud)
+    persistStats(trainStats.good, trainStats.bad, trainStats.xp, trainStats.srs);
+  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.srs, persistStats]);
 
   const handleSquareClick = (sq: string) => {
     if (mode !== 'train' || !trainLine || moveIdx >= trainLine.moves.length) return;
@@ -216,6 +328,7 @@ export default function App() {
         if (moveAttempt) {
            if (moveAttempt.san === expected.san) {
              // Correct move
+             triggerMoveSound(moveAttempt);
              setGame(tempGame);
              setMoveIdx(m => m + 1);
              setSelectedSquare(null);
@@ -231,6 +344,7 @@ export default function App() {
              }
            } else {
              // Wrong move
+             playErrorSound();
              setTrainHadError(true);
              setTrainStats(s => ({...s, streak: 0}));
              setTrainStatus({type: 'error', msg: `✗ ${moveAttempt.san} n'est pas le coup attendu. Réessayez.`});
@@ -256,33 +370,60 @@ export default function App() {
     }
   };
 
+  const rankData = getRankData(trainStats.xp);
+
   return (
     <div className="min-h-screen flex flex-col font-body selection:bg-[#FCE300] selection:text-black bg-[#fdfaf6]">
       {/* HEADER */}
-      <header className="flex justify-between items-center px-4 sm:px-6 py-4 bg-white border-b-[3px] border-black z-20 sticky top-0">
-        <button onClick={() => setMode('landing')} className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity">
+      <header className="flex justify-between items-center px-4 sm:px-6 py-4 bg-white border-b-[3px] border-black z-20 sticky top-0 gap-4 overflow-x-auto custom-scrollbar">
+        <button onClick={() => setMode('landing')} className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity shrink-0">
           <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FCE300] border-[3px] border-black rounded-full flex items-center justify-center font-heading font-black text-xl sm:text-2xl shadow-[3px_3px_0_0_#111]">
             ♞
           </div>
-          <div className="hidden sm:flex flex-col items-start">
+          <div className="hidden md:flex flex-col items-start min-w-[120px]">
             <span className="font-heading font-black text-2xl uppercase leading-none tracking-tighter">Rick.Chess</span>
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Sokolsky Mastery</span>
           </div>
         </button>
-        <nav className="flex gap-2 sm:gap-4">
+
+        {/* PROGRESSION WIDGET */}
+        <div className="hidden sm:flex flex-col justify-center px-4 shrink-0 mx-auto min-w-[200px] max-w-[300px]">
+           <div className="flex justify-between items-end mb-1">
+             <span className="text-[10px] uppercase font-black tracking-widest text-[#EC4899]">{rankData.currentRank.name}</span>
+             <span className="text-[10px] font-bold text-gray-400">LVL {rankData.currentRank.level}</span>
+           </div>
+           <div className="h-4 w-full bg-gray-100 border-2 border-black rounded-full overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] relative" title={`${trainStats.xp} XP`}>
+             <div 
+               className="h-full bg-[#FCE300] border-r-2 border-black transition-all duration-500"
+               style={{ width: `${Math.max(2, rankData.progressPercent)}%` }}
+             />
+             <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black tracking-widest">
+                {rankData.xpIntoLevel} / {rankData.xpNeededForNext} XP
+             </div>
+           </div>
+        </div>
+
+        <nav className="flex gap-2 sm:gap-4 shrink-0">
           <button 
             onClick={() => { setMode('study'); setMoveIdx(0); }}
             className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
               mode === 'study' ? "bg-[#3B82F6] text-white shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
           >
-            <span className="text-sm">📖</span> <span className="hidden sm:inline">Étudier</span>
+            <span className="text-sm">📖</span> <span className="hidden xl:inline">Étudier</span>
           </button>
           <button 
             onClick={() => { setMode('train'); setMoveIdx(0); setTrainLine(null); }}
             className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
               mode === 'train' ? "bg-[#EC4899] text-white shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
           >
-            <span className="text-sm">⚡</span> <span className="hidden sm:inline">S'entraîner</span>
+            <span className="text-sm">⚡</span> <span className="hidden xl:inline">S'entraîner</span>
+          </button>
+          <button 
+            onClick={() => setMode('leaderboard')}
+            className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
+              mode === 'leaderboard' ? "bg-[#EAB308] text-black shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
+          >
+            <span className="text-sm">🏆</span> <span className="hidden xl:inline">Panthéon</span>
           </button>
           
           {user ? (
@@ -372,8 +513,13 @@ export default function App() {
         </div>
       )}
 
+      {/* VIEW: LEADERBOARD */}
+      {mode === 'leaderboard' && (
+        <LeaderboardView />
+      )}
+
       {/* VIEW: STUDY OR TRAIN */}
-      {mode !== 'landing' && (
+      {mode !== 'landing' && mode !== 'leaderboard' && (
         <main className="flex-1 max-w-[1400px] mx-auto w-full p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start relative z-10 pt-6 sm:pt-8 animate-in fade-in duration-300">
           
           {/* LEFT COLUMN: Sidebar variations */}
@@ -420,7 +566,7 @@ export default function App() {
               <div className="bg-white border-[3px] border-black p-2 sm:p-4 rounded-3xl shadow-[6px_6px_0_0_#111] sm:shadow-[8px_8px_0_0_#111] mb-6 relative">
                 <Board 
                   game={game} 
-                  orientation="white" 
+                  orientation={boardOrientation}
                   lastMove={lastMove}
                   hintSquare={hintSquare}
                   selectedSquare={selectedSquare}
@@ -434,6 +580,15 @@ export default function App() {
                 />
               </div>
               
+              <div className="flex items-center gap-2 mb-4">
+                 <button 
+                   onClick={() => setBoardOrientation(o => o === 'white' ? 'black' : 'white')}
+                   className="w-full bg-white border-[3px] border-black rounded-full px-4 py-3 font-heading font-extrabold text-sm uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2"
+                 >
+                   <span>⬇️ Retouner le plateau ⬆️</span>
+                 </button>
+              </div>
+
               {/* STUDY Board Controls */}
               {mode === 'study' && activeLine && (
                 <div className="flex justify-between items-center bg-white border-[3px] border-black rounded-full p-2 shadow-[4px_4px_0_0_#111]">
@@ -467,6 +622,17 @@ export default function App() {
                     </div>
                  </div>
 
+                 <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+                   <div className="bg-white border-2 border-black rounded-lg p-2 text-center shadow-[2px_2px_0_0_#111]">
+                     <div className="text-[10px] uppercase font-black tracking-widest text-[#EC4899]">À Réviser</div>
+                     <div className="text-xl font-black">{dueReviewIds.length}</div>
+                   </div>
+                   <div className="bg-white border-2 border-black rounded-lg p-2 text-center shadow-[2px_2px_0_0_#111]">
+                     <div className="text-[10px] uppercase font-black tracking-widest text-[#3B82F6]">Nouvelles</div>
+                     <div className="text-xl font-black">{newIds.length}</div>
+                   </div>
+                 </div>
+
                  <div className={cn(
                    "border-[3px] border-black rounded-2xl p-4 sm:p-6 font-bold text-center shadow-[4px_4px_0_0_#111] transition-colors text-sm sm:text-lg",
                    trainStatus.type === 'ready' && "bg-[#FCE300]",
@@ -477,9 +643,9 @@ export default function App() {
                    {trainStatus.msg}
                  </div>
 
-                 <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                 <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
                    <button onClick={startTraining} className="col-span-2 py-3 sm:py-4 bg-black text-white font-heading font-black uppercase tracking-widest border-[3px] border-black rounded-xl transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111] text-sm sm:text-lg">
-                     Nouvelle Ligne
+                     {trainStatus.type === 'info' || trainStatus.type === 'success' || !trainLine ? "Démarrer l'entraînement" : "Passer cette ligne"}
                    </button>
                    <button onClick={showHint} disabled={!trainLine} className="py-3 sm:py-4 bg-[#FCE300] text-black font-heading font-bold uppercase tracking-widest border-[3px] border-black rounded-xl transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none text-xs sm:text-sm">
                      Indice
@@ -504,7 +670,7 @@ export default function App() {
               </div>
             ) : (
               // STUDY MODE PANEL
-              <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-6 shadow-[6px_6px_0_0_#111] lg:h-[calc(100vh-250px)] min-h-[350px] sm:min-h-[400px] flex flex-col">
+              <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-6 shadow-[6px_6px_0_0_#111] lg:h-[calc(100vh-140px)] min-h-[400px] flex flex-col">
                 <div className="flex justify-between items-start mb-4 sm:mb-6 border-b-[3px] border-black pb-4 shrink-0">
                   <div>
                     <div className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Analyse Strategique</div>
@@ -523,7 +689,7 @@ export default function App() {
                   ) : null}
                 </div>
 
-                <div className="mb-4 sm:mb-6 shrink-0">
+                <div className="mb-4 sm:mb-6 shrink-0 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
                   {activeMoveIndex === 0 ? (
                     <div className="bg-[#f0f9ff] border-2 border-[#bae6fd] p-3 sm:p-4 rounded-xl text-sm sm:text-lg text-[#0369a1] font-medium">Naviguez avec les flèches ou les boutons de la barre de contrôle pour étudier chaque coup de la variante étape par étape.</div>
                   ) : (
@@ -531,8 +697,10 @@ export default function App() {
                   )}
                 </div>
 
+                <LichessStats fen={game.fen()} />
+
                 {/* Move list */}
-                <div className="flex-1 bg-[#fdfaf6] border-[3px] border-black rounded-xl p-3 sm:p-4 overflow-y-auto shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)]">
+                <div className="flex-1 bg-[#fdfaf6] border-[3px] border-black rounded-xl p-3 sm:p-4 overflow-y-auto shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] min-h-[200px] custom-scrollbar">
                   <div className="text-[10px] uppercase font-black tracking-widest text-[#EC4899] mb-3 sm:mb-4 border-b-2 border-dashed border-black/20 pb-2">Déroulé théorique</div>
                   {activeLine && (
                     <div className="space-y-1">
@@ -581,6 +749,81 @@ export default function App() {
         </div>
         <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500">© 2026 Sokolsky Mastery</div>
       </footer>
+    </div>
+  );
+}
+
+// ============================================
+// LEADERBOARD COMPONENT
+// ============================================
+function LeaderboardView() {
+  const [leaders, setLeaders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchLeaders() {
+      try {
+        const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+        const snapshot = await getDocs(q);
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLeaders(data);
+      } catch (e) {
+        console.error("Erreur giga Leaderboard:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLeaders();
+  }, []);
+
+  return (
+    <div className="flex-1 flex flex-col p-4 sm:p-8 animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full">
+      <div className="text-center mb-8">
+        <h2 className="font-heading font-black text-5xl sm:text-6xl uppercase tracking-tighter text-[#EAB308] drop-shadow-[4px_4px_0_#111]">
+          Le Panthéon
+        </h2>
+        <p className="text-gray-600 font-bold uppercase tracking-widest mt-2">Les maîtres incontestés de la Sokolsky</p>
+      </div>
+
+      <div className="bg-white border-[3px] border-black rounded-3xl p-4 sm:p-8 shadow-[8px_8px_0_0_#111]">
+        {loading ? (
+          <div className="text-center py-10 font-bold text-gray-500 animate-pulse">Chargement des légendes...</div>
+        ) : leaders.length === 0 ? (
+          <div className="text-center py-10 font-bold text-gray-500">Aucun joueur dans le classement pour le moment.</div>
+        ) : (
+          <div className="space-y-4">
+            {leaders.map((leader, index) => {
+              const r = getRankData(leader.xp || 0);
+              return (
+                <div key={leader.id} className="flex items-center gap-4 bg-gray-50 border-2 border-black rounded-2xl p-4 hover:-translate-y-1 transition-transform shadow-[4px_4px_0_0_#111]">
+                  <div className={cn(
+                    "w-12 h-12 flex items-center justify-center font-black text-xl rounded-full border-2 border-black shrink-0",
+                    index === 0 ? "bg-[#FCE300]" : index === 1 ? "bg-gray-300" : index === 2 ? "bg-orange-300" : "bg-white"
+                  )}>
+                    {index + 1}
+                  </div>
+                  
+                  <img 
+                    src={leader.photoURL || `https://ui-avatars.com/api/?name=${leader.displayName || 'U'}&background=random`} 
+                    alt="Avatar" 
+                    className="w-12 h-12 rounded-full border-2 border-black object-cover shrink-0" 
+                  />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="font-heading font-bold text-lg truncate">{leader.displayName || "Joueur Anonyme"}</div>
+                    <div className="text-xs uppercase font-black tracking-widest text-[#EC4899] truncate">{r.currentRank.name} (Lvl {r.currentRank.level})</div>
+                  </div>
+                  
+                  <div className="text-right shrink-0">
+                    <div className="font-black text-2xl text-[#3B82F6]">{leader.xp || 0}</div>
+                    <div className="text-[10px] uppercase font-bold text-gray-500">XP</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
