@@ -1,0 +1,22 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap');
+
+@theme {
+  --font-heading: "Outfit", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #fdfaf6;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Rick utility classes */
+@layer utilities {
+  .rick-brutal {
+    @apply border-[3px] border-black shadow-[6px_6px_0_0_#111];
+  }
+}
+

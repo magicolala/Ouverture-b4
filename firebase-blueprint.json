@@ -1,0 +1,23 @@
+{
+  "entities": {
+    "UserStats": {
+      "title": "UserStats",
+      "description": "Training statistics for a user.",
+      "type": "object",
+      "properties": {
+        "good": { "type": "number", "description": "Number of freely completed training lines." },
+        "bad": { "type": "number", "description": "Number of failed training lines." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last time stats were updated." }
+      },
+      "required": ["good", "bad", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserStats"
+      },
+      "description": "User statistics. Only readable and writable by the owner."
+    }
+  }
+}

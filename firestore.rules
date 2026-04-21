@@ -1,0 +1,44 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phase 0: Global Safety Net
+    match /{document=**} { 
+      allow read, write: if false; 
+    }
+
+    // Phase 3: Primitive Helpers
+    function isValidId(id) { 
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    
+    // UserStats Validation logic
+    function isValidUserStats(data) {
+      return data.keys().hasAll(['good', 'bad', 'updatedAt']) 
+             && data.keys().size() == 3
+             && data.good is number
+             && data.bad is number
+             && data.updatedAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+      allow list: if false; // No blanket reads, client cannot fetch all users.
+      
+      allow create: if isSignedIn() 
+                    && request.auth.uid == userId 
+                    && isValidId(userId)
+                    && isValidUserStats(incoming());
+                    
+      allow update: if isSignedIn() 
+                    && request.auth.uid == userId 
+                    && isValidId(userId)
+                    && isValidUserStats(incoming())
+                    && incoming().diff(existing()).affectedKeys().hasOnly(['good', 'bad', 'updatedAt']);
+                    
+      allow delete: if false;
+    }
+  }
+}
