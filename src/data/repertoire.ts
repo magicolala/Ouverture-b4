@@ -37,7 +37,23 @@ export const C = {
 
   CONTRE_C5_D4: "<em>🎯 Coup de rupture.</em> <strong>d4</strong> ouvre le centre <strong>et</strong> attaque le fou (souvent en c5). Très bon quand tu es mieux développé : tu gagnes de l’espace, des tempos, et tu transformes l’ouverture en initiative.",
 
-  D5: "Réponse classique et solide : Noir occupe le centre sans attaquer b4 tout de suite. Ton plan est très stable : <strong>Fb2</strong>, <strong>e3</strong>, <strong>a3</strong> (souvent indispensable), puis <strong>c4</strong> pour mettre <strong>d5</strong> sous pression."
+  D5: "Réponse classique et solide : Noir occupe le centre sans attaquer b4 tout de suite. Ton plan est très stable : <strong>Fb2</strong>, <strong>e3</strong>, <strong>a3</strong> (souvent indispensable), puis <strong>c4</strong> pour mettre <strong>d5</strong> sous pression.",
+
+  // ── Commentaires de transposition ──────────────────────────────────────
+
+  TRANSPOSE_D5_SETUP: "<em>🔄 Transposition !</em> On rejoint la <strong>position-type du Chapitre 2</strong> (contre 1…d5). Même plan : <strong>a3</strong>, <strong>Cf3</strong>, <strong>Fe2</strong>, <strong>O-O</strong>, <strong>c4</strong>. Si tu connais la ligne principale contre d5, tu es en terrain connu.",
+
+  TRANSPOSE_PHILIDOR: "<em>🔄 Transposition !</em> On rejoint la <strong>position Philidor du Chapitre 1</strong> (1.b4 e5 2.Fb2 d6). Même plan : <strong>c4</strong>, <strong>Fe2</strong>, <strong>Cc3</strong>, puis <strong>d4</strong> au bon moment. Peu importe l'ordre de coups, la position cible est identique.",
+
+  TRANSPOSE_FIANCHETTO: "<em>🔄 Transposition !</em> On rejoint la <strong>position fianchetto du Chapitre 3</strong> (1.b4 Cf6 2.Fb2 g6). Même plan : <strong>c4</strong>, <strong>Cf3</strong>, <strong>Fe2</strong>, <strong>d4</strong>. ⚠️ Rappel : <strong>pas de a3</strong> contre le fianchetto !",
+
+  TRANSPOSE_PIEGE_BXE5: "<em>🔄 Transposition !</em> On rejoint le <strong>piège Fxe5 + Fxb4</strong> du Chapitre 1 (2…Cf6 : échange simplifiant). Même position, même refus de Noir : on garde notre avance.",
+
+  TRANSPOSE_PIEGE_BXG7: "<em>🔄 Transposition !</em> On rejoint le <strong>piège Fxg7 du Chapitre 2</strong>. Noir a capturé en b4 trop tôt : la diagonale s'ouvre et la tour h8 est en danger.",
+
+  TRANSPOSE_C5_CONTRE: "<em>🔄 Transposition !</em> On rejoint la <strong>variante …c5 du Chapitre 2</strong> (le contre central). Plan : <strong>bxc5</strong>, <strong>Cf3</strong>, puis <strong>d4</strong> ou <strong>c4</strong> selon la réponse noire.",
+
+  TRANSPOSE_SLAVE: "<em>🔄 Transposition !</em> On rejoint la <strong>structure Slave inversée</strong> (Chapitre 2, transpositions). Plan identique : <strong>c4</strong> pour presser d5."
 } as const;
 
 // ============================================================================
@@ -1110,7 +1126,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "b4", comment: C.B4 },
       { san: "Nf6", comment: C.NF6, circles: [{"square":"e4","color":"yellow"}] },
       { san: "Bb2", comment: C.BB2 },
-      { san: "d5" },
+      { san: "d5", comment: C.TRANSPOSE_D5_SETUP },
       { san: "e3", comment: C.E3 },
       { san: "e6" },
       { san: "a3", comment: C.A3_MANDATORY },
@@ -1415,7 +1431,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "b4", comment: C.B4 },
       { san: "Nf6", comment: C.NF6 },
       { san: "Bb2", comment: C.BB2 },
-      { san: "g6" },
+      { san: "g6", comment: C.TRANSPOSE_FIANCHETTO },
       { san: "e3", comment: C.E3 },
       { san: "Bg7" },
       { san: "Nf3" },
@@ -1481,7 +1497,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Nf6", comment: C.NF6 },
       { san: "Bb2", comment: C.BB2 },
       { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
-      { san: "Bxe5" },
+      { san: "Bxe5", comment: C.TRANSPOSE_PIEGE_BXE5 },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
       { san: "Nf3" },
       { san: "d6" },
@@ -1500,7 +1516,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Nf6", comment: C.NF6 },
       { san: "Bb2", comment: C.BB2 },
       { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
-      { san: "Bxe5" },
+      { san: "Bxe5", comment: C.TRANSPOSE_PIEGE_BXE5 },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
       { san: "Nf3" },
       { san: "Nc6" },
@@ -1519,7 +1535,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Nf6", comment: C.NF6 },
       { san: "Bb2", comment: C.BB2 },
       { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
-      { san: "Bxe5" },
+      { san: "Bxe5", comment: C.TRANSPOSE_PIEGE_BXE5 },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
       { san: "Nf3" },
       { san: "O-O", comment: C.OO },
@@ -1543,7 +1559,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Bb2", comment: C.BB2 },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
-      { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
+      { san: "e5", comment: C.TRANSPOSE_PHILIDOR, circles: [{"square":"e5","color":"yellow"}] },
       { san: "c4", comment: C.C4_ANTI_D6 },
       { san: "Be7", comment: C.BE7 },
       { san: "Be2", comment: C.BE2 },
@@ -1585,7 +1601,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Bb2", comment: C.BB2 },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
-      { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
+      { san: "e5", comment: C.TRANSPOSE_PHILIDOR, circles: [{"square":"e5","color":"yellow"}] },
       { san: "c4", comment: C.C4_ANTI_D6 },
       { san: "Be6" },
       { san: "Nc3", comment: C.NC3_TARGET },
@@ -1608,7 +1624,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "b4", comment: C.B4 },
       { san: "e6" },
       { san: "Bb2", comment: C.BB2 },
-      { san: "d5", circles: [{"square":"d5","color":"yellow"}] },
+      { san: "d5", comment: C.TRANSPOSE_D5_SETUP, circles: [{"square":"d5","color":"yellow"}] },
       { san: "e3", comment: C.E3 },
       { san: "Nf6", comment: C.NF6 },
       { san: "a3", comment: C.A3_MANDATORY },
@@ -1755,7 +1771,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "Bb2", comment: C.BB2 },
       { san: "d5", circles: [{"square":"d5","color":"yellow"}] },
       { san: "e3", comment: C.E3 },
-      { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
+      { san: "Bxb4", comment: C.TRANSPOSE_PIEGE_BXG7 },
       { san: "Bxg7", comment: C.PIEGE_BXG7 },
     ]
   },
@@ -1835,7 +1851,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     description: "Comme 1…Cf6 2…g6. ⚠️ Pas de a3 : développement rapide avec c4, Fe2.",
     moves: [
       { san: "b4", comment: C.B4 },
-      { san: "g6" },
+      { san: "g6", comment: C.TRANSPOSE_FIANCHETTO },
       { san: "Bb2", comment: C.BB2 },
       { san: "Nf6", comment: C.NF6 },
       { san: "e3", comment: C.E3 },
@@ -1900,7 +1916,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     description: "Structure Caro-Kann inversée. Plan standard avec c4.",
     moves: [
       { san: "b4", comment: C.B4 },
-      { san: "c6" },
+      { san: "c6", comment: C.TRANSPOSE_SLAVE },
       { san: "Bb2", comment: C.BB2 },
       { san: "d5" },
       { san: "e3", comment: C.E3 },
@@ -1978,7 +1994,7 @@ export const REPERTOIRE: RepertoireLine[] = [
       { san: "b4", comment: C.B4 },
       { san: "d6" },
       { san: "Bb2", comment: C.BB2 },
-      { san: "e5", circles: [{"square":"e5","color":"yellow"}] },
+      { san: "e5", comment: C.TRANSPOSE_PHILIDOR, circles: [{"square":"e5","color":"yellow"}] },
       { san: "e3", comment: C.E3 },
       { san: "Nf6", comment: C.NF6 },
       { san: "c4", comment: C.C4_ANTI_D6 },
