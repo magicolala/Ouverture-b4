@@ -3,7 +3,7 @@ import { Chess } from 'chess.js';
 import { Board } from './components/Board';
 import { EvalBar } from './components/EvalBar';
 import { LichessStats } from './components/LichessStats';
-import { REPERTOIRE, RepertoireLine, MoveAnnotation } from './data/repertoire';
+import { REPERTOIRE, RepertoireLine, MoveAnnotation, CHAPTERS, getStructuredRepertoire } from './data/repertoire';
 import { getRankData } from './lib/progression';
 import { calculateSRS, SRSItem } from './lib/srs';
 import { cn } from './utils';
@@ -54,7 +54,7 @@ export default function App() {
   const [stockfishEnabled, setStockfishEnabled] = useState(false);
   
   // Initialize Stockfish Hook
-  const { evalScore, mate } = useStockfish(game.fen(), stockfishEnabled);
+  const { evalScore, mate, bestMove } = useStockfish(game.fen(), stockfishEnabled);
 
   // Load from local storage immediately
   useEffect(() => {
@@ -74,42 +74,46 @@ export default function App() {
       if (currentUser) {
         // Fetch or create user stats
         const docRef = doc(db, 'users', currentUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          const mergedSrs = data.srs || {};
-          const badges = data.badges || [];
-          setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
-          // Overwrite local with cloud
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
-          // Update profile data in DB if changed
-          if (data.displayName !== currentUser.displayName || data.photoURL !== currentUser.photoURL) {
-            updateDoc(docRef, { 
-              displayName: currentUser.displayName || 'Joueur Anonyme', 
-              photoURL: currentUser.photoURL || '',
-              updatedAt: serverTimestamp()
-            });
+        try {
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            const mergedSrs = data.srs || {};
+            const badges = data.badges || [];
+            setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
+            // Overwrite local with cloud
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
+            // Update profile data in DB if changed
+            if (data.displayName !== currentUser.displayName || data.photoURL !== currentUser.photoURL) {
+              updateDoc(docRef, { 
+                displayName: currentUser.displayName || 'Joueur Anonyme', 
+                photoURL: currentUser.photoURL || '',
+                updatedAt: serverTimestamp()
+              }).catch(e => console.error("Could not update profile", e));
+            }
+          } else {
+            // Initialize in DB from local
+            const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
+            let startStats = { good: 0, bad: 0, xp: 0, badges: [] as string[], srs: {} as Record<number, SRSItem> };
+            if (localStr) {
+               try { startStats = { ...startStats, ...JSON.parse(localStr) }; } catch (e) {}
+            }
+            if (!startStats.srs) startStats.srs = {};
+            if (!startStats.badges) startStats.badges = [];
+            
+            try {
+              await setDoc(docRef, { 
+                ...startStats, 
+                displayName: currentUser.displayName || 'Nouveau Joueur',
+                photoURL: currentUser.photoURL || '',
+                updatedAt: serverTimestamp() 
+              });
+            } catch (e) {
+              console.error("Could not initialize user stats", e);
+            }
           }
-        } else {
-          // Initialize in DB from local
-          const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-          let startStats = { good: 0, bad: 0, xp: 0, badges: [] as string[], srs: {} as Record<number, SRSItem> };
-          if (localStr) {
-             try { startStats = { ...startStats, ...JSON.parse(localStr) }; } catch (e) {}
-          }
-          if (!startStats.srs) startStats.srs = {};
-          if (!startStats.badges) startStats.badges = [];
-          
-          try {
-            await setDoc(docRef, { 
-              ...startStats, 
-              displayName: currentUser.displayName || 'Nouveau Joueur',
-              photoURL: currentUser.photoURL || '',
-              updatedAt: serverTimestamp() 
-            });
-          } catch (e) {
-            console.error("Could not initialize user stats", e);
-          }
+        } catch (error) {
+          console.error("Could not fetch user stats:", error);
         }
       }
     });
@@ -351,10 +355,13 @@ export default function App() {
     }
   };
 
+  const srsJson = JSON.stringify(trainStats.srs);
+  const badgesJson = JSON.stringify(trainStats.badges);
+
   useEffect(() => {
     // When trainStats change, persist (local & cloud)
     persistStats(trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, trainStats.badges, trainStats.srs);
-  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, trainStats.badges, trainStats.srs, persistStats]);
+  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, badgesJson, srsJson, persistStats]);
 
   const handleSquareClick = (sq: string) => {
     if (mode !== 'train' || !trainLine || moveIdx >= trainLine.moves.length) return;
@@ -603,35 +610,49 @@ export default function App() {
           <div className={cn("lg:col-span-3 space-y-4", mode === 'train' ? "hidden lg:block opacity-50 pointer-events-none grayscale" : "block")}>
             <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-5 shadow-[6px_6px_0_0_#111] max-h-[50vh] lg:max-h-[calc(100vh-140px)] overflow-y-auto">
               <h2 className="font-heading font-black text-xl uppercase tracking-tighter mb-4 border-b-[3px] border-black pb-2 flex justify-between items-center">
-                Variantes <span className="text-xs bg-black text-white px-2 py-0.5 rounded-md font-body">108</span>
+                Variantes <span className="text-xs bg-black text-white px-2 py-0.5 rounded-md font-body">{REPERTOIRE.length}</span>
               </h2>
-              {Object.entries(
-                REPERTOIRE.reduce((acc, line, idx) => {
-                  if (!acc[line.category]) acc[line.category] = [];
-                  acc[line.category].push({ line, idx });
-                  return acc;
-                }, {} as Record<string, { line: typeof REPERTOIRE[0], idx: number }[]>)
-              ).map(([category, items]) => (
-                <div key={category} className="mb-6 last:mb-0">
-                  <h3 className="text-[11px] font-black uppercase tracking-widest text-[#EC4899] mb-3 ml-2 border-b-2 border-dashed border-black/10 pb-1">{category}</h3>
-                  <div className="space-y-2">
-                    {items.map(({ line, idx }) => {
-                      const isActive = mode === 'study' && lineIdx === idx;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => { setMode('study'); handleSelectLine(idx); }}
-                          className={cn(
-                            "block w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-[3px] font-bold text-xs sm:text-sm transition-all relative overflow-hidden",
-                            isActive ? "border-black bg-[#FCE300] shadow-[3px_3px_0_0_#111] translate-x-1" : "border-transparent hover:border-black/20 text-gray-600 hover:bg-gray-100"
-                          )}
-                        >
-                          {isActive && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-black" />}
-                          <span className={cn("inline-block", isActive ? "text-black pl-1" : "text-gray-800")}>{line.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+              {getStructuredRepertoire().map((chapter) => (
+                <div key={chapter.id} className="mb-8 last:mb-0">
+                  <h3 className="text-[13px] font-black uppercase tracking-widest text-black mb-2 border-b-2 border-dashed border-black/20 pb-2">{chapter.title}</h3>
+                  <p className="text-[11px] text-gray-500 font-medium mb-4 ml-1 leading-tight">{chapter.description}</p>
+                  
+                  {chapter.subchapters.map((subchapter) => {
+                    if (subchapter.lines.length === 0) return null;
+                    return (
+                      <div key={subchapter.id} className="mb-6 ml-1 last:mb-0 border-l-[3px] border-black/10 pl-3">
+                        <h4 className="text-[10px] font-black uppercase tracking-wider text-[#EC4899] mb-1">{subchapter.title}</h4>
+                        <p className="text-[10px] text-gray-500 italic mb-3 leading-tight">{subchapter.description}</p>
+                        <div className="space-y-2">
+                          {subchapter.lines.map((line) => {
+                            const idx = REPERTOIRE.indexOf(line);
+                            if (idx === -1) return null;
+                            const isActive = mode === 'study' && lineIdx === idx;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => { setMode('study'); handleSelectLine(idx); }}
+                                className={cn(
+                                  "block w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-[3px] font-bold text-xs sm:text-sm transition-all relative overflow-hidden",
+                                  isActive ? "border-black bg-[#FCE300] shadow-[3px_3px_0_0_#111] translate-x-1" : "border-transparent hover:border-black/20 text-gray-600 hover:bg-gray-100"
+                                )}
+                              >
+                                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-black" />}
+                                <div className="flex flex-col gap-1">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <span className={cn("inline-block leading-tight", isActive ? "text-black pl-1" : "text-gray-800")}>{line.name}</span>
+                                    {line.priority === 'must-know' && (
+                                      <span className="shrink-0 mt-0.5 text-[9px] bg-[#EC4899] text-white px-1.5 py-0.5 rounded font-black uppercase shadow-[1px_1px_0_0_#111]">Socle</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ))}
             </div>
@@ -778,7 +799,13 @@ export default function App() {
 
                 <div className="mb-4 sm:mb-6 shrink-0 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
                   {activeMoveIndex === 0 ? (
-                    <div className="bg-[#f0f9ff] border-2 border-[#bae6fd] p-3 sm:p-4 rounded-xl text-sm sm:text-lg text-[#0369a1] font-medium">Naviguez avec les flèches ou les boutons de la barre de contrôle pour étudier chaque coup de la variante étape par étape.</div>
+                    <div className="bg-[#f0f9ff] border-2 border-[#bae6fd] p-3 sm:p-4 rounded-xl text-sm sm:text-lg text-[#0369a1] font-medium">
+                      {activeLine?.description ? (
+                        <span><strong className="block mb-2 font-black uppercase text-xs tracking-wider text-[#0284c7]">Description de la ligne</strong> {activeLine.description}</span>
+                      ) : (
+                        <span>Naviguez avec les flèches ou les boutons de la barre de contrôle pour étudier chaque coup de la variante étape par étape.</span>
+                      )}
+                    </div>
                   ) : (
                     <div className="text-sm sm:text-lg leading-relaxed font-medium text-gray-800" dangerouslySetInnerHTML={{ __html: currentAnnotation?.comment || '<em class="text-gray-400">Le plan suit son cours. Sortez vos pièces et luttez pour le centre.</em>' }} />
                   )}
