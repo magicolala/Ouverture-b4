@@ -23,7 +23,7 @@ export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
   const { state, currentLine, fen, lastMove, expectedMove } = session;
   const [adminMode, setAdminMode] = useState(false);
-  const [showThreats, setShowThreats] = useState(false);
+  const [showThreats, setShowThreats] = useState(true);
 
   // Validation du répertoire au démarrage (dev only).
   useEffect(() => {
