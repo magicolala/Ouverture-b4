@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import { ChessboardPanel } from "./components/ChessboardPanel";
 import { LearnPanel } from "./components/LearnPanel";
 import { PracticePanel } from "./components/PracticePanel";
 import { SessionComplete } from "./components/SessionComplete";
 import { RepertoireMenu } from "./components/RepertoireMenu";
+import { AdminPanel } from "./components/AdminPanel";
 import { useSession } from "./engine/useSession";
 import {
   playMoveSound,
@@ -20,6 +21,7 @@ import {
 export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
   const { state, currentLine, fen, lastMove, expectedMove } = session;
+  const [adminMode, setAdminMode] = useState(false);
 
   // Validation du répertoire au démarrage (dev only).
   useEffect(() => {
@@ -88,9 +90,25 @@ export default function App() {
     return false;
   };
 
+  if (adminMode) {
+    return <AdminPanel onExit={() => setAdminMode(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-[#fdfaf6] text-gray-900">
-      {!inSession && <RepertoireMenu onStart={session.start} />}
+      {!inSession && (
+        <>
+          <RepertoireMenu onStart={session.start} />
+          <div className="max-w-3xl mx-auto px-4 pb-6">
+            <button
+              onClick={() => setAdminMode(true)}
+              className="w-full py-3 px-4 rounded-xl bg-gray-800 text-gray-300 font-semibold text-sm border-2 border-gray-600 hover:bg-gray-700 transition shadow"
+            >
+              ⚙️ Mode Admin — Éditer le répertoire
+            </button>
+          </div>
+        </>
+      )}
 
       {inSession && state.queue.length > 0 && (
         <div className="max-w-6xl mx-auto p-4 flex flex-col lg:flex-row gap-6">
