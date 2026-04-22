@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { Chess } from "chess.js";
 import { ChessboardPanel } from "./components/ChessboardPanel";
 import { LearnPanel } from "./components/LearnPanel";
 import { PracticePanel } from "./components/PracticePanel";
@@ -49,7 +50,21 @@ export default function App() {
 
   // En PRACTICE, annotations masquées tant que l'utilisateur cherche.
   const showAnnotations = state.mode === "learn" || state.showSolution;
-  const arrowsToShow = showAnnotations ? expectedMove?.arrows : undefined;
+
+  // Flèche jaune auto-générée pour le coup à jouer (from→to).
+  const arrowsToShow = useMemo(() => {
+    if (!showAnnotations || !expectedMove) return undefined;
+    try {
+      const chess = new Chess(fen);
+      const move = chess.move(expectedMove.san);
+      if (move) {
+        return [{ from: move.from, to: move.to, color: "yellow" as const }];
+      }
+    } catch {
+      // FEN invalide ou coup illégal : on ne montre pas de flèche.
+    }
+    return undefined;
+  }, [showAnnotations, expectedMove, fen]);
   const circlesToShow = showAnnotations ? expectedMove?.circles : undefined;
 
   const handleMove = ({
