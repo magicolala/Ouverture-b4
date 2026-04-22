@@ -1,25 +1,43 @@
 import { Chess } from "chess.js";
 
 export const C = {
-  B4: "<em>Ouverture Sokolsky (1.b4).</em> Coup surprise qui gagne de l’espace à l’aile dame. <strong>Idée centrale :</strong> fianchetto du fou en b2 pour peser sur la grande diagonale <strong>a1–h8</strong> et mettre la pression sur <strong>e5</strong>.",
-  E5: "Réponse la plus ambitieuse. Noir prend le centre et <strong>attaque immédiatement b4</strong>. Notre compensation : développement rapide et pression durable sur la diagonale a1–h8 (souvent on privilégie l’activité plutôt que “défendre le pion”).",
-  BB2: "<em>Coup clé.</em> Le fou se place sur la grande diagonale et vise <strong>e5</strong>. <strong>Motif fréquent :</strong> si Noir “ramasse” b4 trop tôt, le pion e5 devient souvent tactiquement vulnérable (défense insuffisante / surcharge).",
-  D6: "Défense solide de <strong>e5</strong> : structure type <strong>Philidor</strong>. En contrepartie, Noir se développe un peu plus lentement (le fou f8 manque d’air), ce qui nous laisse le temps d’installer <strong>c4</strong> et de finir le développement proprement.",
-  E3: "Coup sobre mais important : ouvre le fou f1 et prépare <strong>Cf3</strong>. <strong>Plan standard :</strong> c4, Fe2, roque, puis Cc3 et/ou d4 selon la réaction noire.",
-  NF6: "Développement naturel : contrôle <strong>e4</strong> et <strong>d5</strong>, et accélère le roque. Rien d’urgent : on continue notre mise en place.",
-  C4_ANTI_D6: "<em>Setup anti-…d6.</em> On fixe de l’espace à l’aile dame et on prépare <strong>Cc3</strong>. <strong>Note pratique :</strong> ici, <strong>a3 n’est pas prioritaire</strong> : on gagne plus en tempo en développant vite (c4 + Cc3).",
-  BE7: "Noir prépare le roque. Position solide mais assez passive : à nous de garder l’initiative par le développement et le jeu central au bon moment.",
-  BE2: "Développement harmonieux. On réserve souvent <strong>Fd3</strong> (qui peut gêner certains plans centraux) et on sécurise le roque. <strong>Suite logique :</strong> 0-0 puis Cc3 / d4 selon la position.",
-  OO: "Roque : Noir met son roi en sécurité. La question devient : quand jouer <strong>d4</strong> (ou cxd5) pour ouvrir le jeu avec nos pièces mieux placées ?",
-  NC3_TARGET: "<em>Position type atteinte.</em> Nos pièces sortent sans concessions. <strong>Plans :</strong><br>• <span style='color:#81b64c'>Cf3 + 0-0</span> (finir le développement)<br>• <span style='color:#e8a33d'>d4</span> pour contester le centre<br>• <span style='color:#e8a33d'>a4–a5</span> pour grignoter l’aile dame si Noir reste passif",
-  A3_MANDATORY: "<em>⚠️ Coup très important.</em> <strong>a3</strong> stabilise b4 et coupe l’idée …a5 qui peut fissurer ton aile dame. <strong>Règle pratique :</strong> contre les structures avec …d5, <strong>on ne “saute” presque jamais a3</strong>.",
-  C4_VS_D5: "<em>Setup complet.</em> Le bloc <strong>b4–c4</strong> met la pression sur d5. <strong>Plans :</strong><br>• cxd5 au bon moment pour ouvrir des lignes<br>• d4 si le centre le permet<br>• Cc3 + roque pour transformer l’espace en initiative",
-  FIANCHETTO_NO_A3: "<em>⚠️ Setup différent.</em> Face au fianchetto, l’objectif est de développer vite et de contester le centre. <strong>Ici, a3 est souvent lent</strong> : on préfère <strong>Nf3</strong>, <strong>c4</strong>, <strong>Be2</strong>, roque, puis <strong>d4</strong> au bon moment.",
-  PIEGE_BXB4_ERROR: "<em>⚠️ GROSSE ERREUR !</em> Noir prend le pion au lieu de développer. Le fou f8 abandonne la défense de g7 et la grande diagonale est grande ouverte.",
-  PIEGE_BXG7: "<em>🎯 LE PIÈGE CLASSIQUE !</em> On va <strong>manger la tour h8</strong> au coup suivant pour un gain matériel énorme. À retenir par cœur.",
-  CONTRE_C5: "Contre-attaque sur l'aile dame. Noir veut liquider b4 pour nous délester de notre avantage d'espace.",
-  CONTRE_C5_D4: "<em>🎯 Coup clé !</em> On ouvre le jeu au centre ET on attaque le fou c5. Gain d'espace et forte initiative.",
-  D5: "Réponse classique. Noir occupe le centre sans défier directement b4."
+  B4: "<em>Ouverture Sokolsky (1.b4).</em> Coup surprise qui gagne de l’espace à l’aile dame. <strong>Idée :</strong> fianchetto en <strong>Fb2</strong> pour dominer la diagonale <strong>a1–h8</strong> et cibler <strong>e5</strong>. <strong>Plan :</strong> développement rapide + pression plutôt que “s’accrocher” au pion b4.",
+
+  E5: "La réponse la plus directe : Noir prend le centre et <strong>met immédiatement b4 sous pression</strong>. On accepte souvent de “sacrifier” du temps à Noir s’il veut capturer b4 : notre compensation, c’est <strong>activité</strong>, développement fluide et pression sur <strong>e5</strong> via la diagonale a1–h8.",
+
+  BB2: "<em>Coup pivot.</em> Le fou s’installe sur la grande diagonale et vise <strong>e5</strong>. <strong>Motif récurrent :</strong> si Noir capture b4 trop tôt, il se retrouve souvent en <strong>surcharge</strong> sur e5 (défense insuffisante / pièces mal coordonnées).",
+
+  D6: "Défense solide de <strong>e5</strong> (structure <strong>type Philidor</strong>). En échange, Noir limite un peu son jeu : le fou f8 manque d’air. Profite du tempo pour jouer <strong>c4</strong>, finir ton développement et préparer une poussée centrale (<strong>d4</strong>) au bon moment.",
+
+  E3: "Petit coup, gros impact : ouvre le fou f1 et prépare <strong>Cf3</strong> sans se découvrir. <strong>Plan standard :</strong> <strong>c4</strong>, <strong>Cf3</strong>, <strong>Fe2</strong>, roque, puis <strong>Cc3</strong> et <strong>d4</strong> selon la structure.",
+
+  NF6: "Développement naturel : contrôle <strong>e4</strong> et <strong>d5</strong>, prépare le roque. Pas de panique : on continue notre plan (mise en place + pression durable sur le centre).",
+
+  C4_ANTI_D6: "<em>Setup anti-…d6.</em> <strong>c4</strong> conteste immédiatement l’espace noir et prépare <strong>Cc3</strong>. <strong>Point pratique :</strong> ici, <strong>a3 n’est pas urgent</strong> : on gagne plus en gardant l’initiative avec développement rapide (c4 + Cc3).",
+
+  BE7: "Noir prépare le roque. Position solide mais un peu passive : à toi de conserver l’initiative via le développement, puis une rupture centrale au bon timing (<strong>d4</strong> ou parfois <strong>cxd5</strong>).",
+
+  BE2: "Développement propre et flexible. On évite souvent de se précipiter avec <strong>Fd3</strong> (qui peut gêner d4). <strong>Suite logique :</strong> roque, puis <strong>Cc3</strong> et décision centrale (<strong>d4</strong> / échanges) selon la réponse noire.",
+
+  OO: "Roque noir : roi en sécurité. <strong>Question stratégique :</strong> quand ouvrir le centre ? Si tes pièces sont mieux placées, <strong>d4</strong> (ou une capture centrale) devient très fort pour transformer ton avance de développement en initiative.",
+
+  NC3_TARGET: "<em>Position-type.</em> Tu as une mise en place fluide sans concessions. <strong>Plans :</strong><br>• <span style='color:#81b64c'>finir le développement</span> (Cf3, roque)<br>• <span style='color:#e8a33d'>d4</span> pour défier le centre (quand tout est prêt)<br>• <span style='color:#e8a33d'>a4–a5</span> si Noir reste passif : gagner de l’espace et fixer des faiblesses à l’aile dame.",
+
+  A3_MANDATORY: "<em>⚠️ Coup clé.</em> <strong>a3</strong> sécurise b4 et coupe l’idée …<strong>a5</strong> (qui peut fissurer ton aile dame). <strong>Règle pratique :</strong> contre les structures avec …<strong>d5</strong>, <strong>on ne “saute” presque jamais a3</strong> : c’est le garde-fou positionnel.",
+
+  C4_VS_D5: "<em>Setup complet.</em> Le duo <strong>b4–c4</strong> met <strong>d5</strong> sous pression et fixe de l’espace. <strong>Plans :</strong><br>• <strong>cxd5</strong> au bon moment pour ouvrir des lignes<br>• <strong>d4</strong> si la position le permet<br>• <strong>Cc3 + roque</strong> : convertir l’espace en initiative (pièces actives, centre contesté).",
+
+  FIANCHETTO_NO_A3: "<em>⚠️ Plan spécifique vs fianchetto.</em> Ici, <strong>a3 est souvent trop lent</strong>. Objectif : <strong>développer vite</strong> et jouer au centre. <strong>Priorités :</strong> <strong>Nf3</strong>, <strong>c4</strong>, <strong>Be2</strong>, roque, puis <strong>d4</strong> au bon moment (ouvrir le jeu avant que le fou g7 ne devienne “monstre”).",
+
+  PIEGE_BXB4_ERROR: "<em>⚠️ Grosse imprécision.</em> Noir “ramasse” b4 et perd du temps de développement. <strong>Conséquence :</strong> la diagonale <strong>a1–h8</strong> s’ouvre, et Noir peut se retrouver en retard / en <strong>surcharge</strong> pour défendre des cases clés (souvent autour de g7 et e5).",
+
+  PIEGE_BXG7: "<em>🎯 Thème tactique.</em> <strong>Fxg7 !</strong> profite de la diagonale ouverte : la tour <strong>h8</strong> devient une cible directe. <strong>Idée :</strong> on force un gain matériel (souvent la tour) ou une énorme désorganisation du roque noir. À connaître “réflexe”.",
+
+  CONTRE_C5: "Contre-attaque immédiate : Noir veut casser ton espace en attaquant le socle <strong>b4</strong> et ouvrir des lignes. Il faut réagir de façon énergique (souvent en capturant) pour ne pas se faire liquider “gratuitement”.",
+
+  CONTRE_C5_D4: "<em>🎯 Coup de rupture.</em> <strong>d4</strong> ouvre le centre <strong>et</strong> attaque le fou (souvent en c5). Très bon quand tu es mieux développé : tu gagnes de l’espace, des tempos, et tu transformes l’ouverture en initiative.",
+
+  D5: "Réponse classique et solide : Noir occupe le centre sans attaquer b4 tout de suite. Ton plan est très stable : <strong>Fb2</strong>, <strong>e3</strong>, <strong>a3</strong> (souvent indispensable), puis <strong>c4</strong> pour mettre <strong>d5</strong> sous pression."
 } as const;
 
 // ============================================================================
