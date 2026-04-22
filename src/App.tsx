@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Chess } from "chess.js";
+import { computeThreats } from "./lib/threats";
 import { ChessboardPanel } from "./components/ChessboardPanel";
 import { LearnPanel } from "./components/LearnPanel";
 import { PracticePanel } from "./components/PracticePanel";
@@ -22,6 +23,7 @@ export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
   const { state, currentLine, fen, lastMove, expectedMove } = session;
   const [adminMode, setAdminMode] = useState(false);
+  const [showThreats, setShowThreats] = useState(false);
 
   // Validation du répertoire au démarrage (dev only).
   useEffect(() => {
@@ -43,6 +45,25 @@ export default function App() {
     }
   }, [state.phase, state.mode]);
 
+  // Raccourci clavier « X » pour basculer l'affichage des menaces.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "x" && e.key !== "X") return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      setShowThreats((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const inSession = currentLine != null;
   const showCompleteScreen =
     state.phase === "line-complete" && state.mode === "practice";
@@ -53,20 +74,33 @@ export default function App() {
   // En PRACTICE, annotations masquées tant que l'utilisateur cherche.
   const showAnnotations = state.mode === "learn" || state.showSolution;
 
-  // Flèche jaune auto-générée pour le coup à jouer (from→to).
+  // Flèches rouges pour les pièces insuffisamment protégées (« show threat »).
+  const threatArrows = useMemo(() => {
+    if (!showThreats) return [];
+    return computeThreats(fen).map((t) => ({
+      from: t.from,
+      to: t.to,
+      color: "red" as const,
+    }));
+  }, [showThreats, fen]);
+
+  // Flèche jaune auto-générée pour le coup à jouer (from→to) + flèches de menace.
   const arrowsToShow = useMemo(() => {
-    if (!showAnnotations || !expectedMove) return undefined;
-    try {
-      const chess = new Chess(fen);
-      const move = chess.move(expectedMove.san);
-      if (move) {
-        return [{ from: move.from, to: move.to, color: "yellow" as const }];
+    const arrows: { from: string; to: string; color?: string }[] = [];
+    if (showAnnotations && expectedMove) {
+      try {
+        const chess = new Chess(fen);
+        const move = chess.move(expectedMove.san);
+        if (move) {
+          arrows.push({ from: move.from, to: move.to, color: "yellow" });
+        }
+      } catch {
+        // FEN invalide ou coup illégal : on ne montre pas de flèche.
       }
-    } catch {
-      // FEN invalide ou coup illégal : on ne montre pas de flèche.
     }
-    return undefined;
-  }, [showAnnotations, expectedMove, fen]);
+    arrows.push(...threatArrows);
+    return arrows.length > 0 ? arrows : undefined;
+  }, [showAnnotations, expectedMove, fen, threatArrows]);
   const circlesToShow = showAnnotations ? expectedMove?.circles : undefined;
 
   const handleMove = ({
@@ -129,8 +163,24 @@ export default function App() {
               }
               onMove={handleMove}
             />
-            <div className="mt-2 text-center text-xs text-gray-500">
-              Ligne {state.currentLineIndex + 1} / {state.queue.length}
+            <div className="mt-2 flex items-center justify-center gap-3 text-xs text-gray-500">
+              <span>
+                Ligne {state.currentLineIndex + 1} / {state.queue.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowThreats((v) => !v)}
+                aria-pressed={showThreats}
+                title="Affiche en rouge les pièces du camp au trait qui peuvent être capturées avec gain matériel (raccourci : X)"
+                className={
+                  "px-2 py-1 rounded-md border text-xs font-medium transition " +
+                  (showThreats
+                    ? "bg-red-600 text-white border-red-700 hover:bg-red-700"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
+                }
+              >
+                {showThreats ? "⚠ Menaces ON" : "⚠ Afficher les menaces"}
+              </button>
             </div>
           </div>
 
