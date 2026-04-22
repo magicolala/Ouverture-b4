@@ -10,8 +10,10 @@ import { cn } from './utils';
 import { auth, loginWithGoogle, logout, db } from './firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { playMoveSound, playCaptureSound, playCastleSound, playErrorSound, playSuccessSound } from './lib/sounds';
+import { playMoveSound, playCaptureSound, playCastleSound, playErrorSound, playSuccessSound, playBadgeSound } from './lib/sounds';
 import { useStockfish } from './lib/useStockfish';
+import { evaluateBadges, BADGES, BadgeDef } from './lib/badges';
+import { validateRepertoire, formatValidationReport } from './lib/validateRepertoire';
 
 type ViewMode = 'landing' | 'study' | 'train' | 'leaderboard';
 const LOCAL_STORAGE_KEY = 'rickchess_stats';
@@ -20,6 +22,16 @@ export default function App() {
   const [game, setGame] = useState(new Chess());
   const [mode, setMode] = useState<ViewMode>('landing');
   const [user, setUser] = useState<User | null>(null);
+
+  // Validate repertoire on mount implicitly for the developer console
+  useEffect(() => {
+    const report = validateRepertoire(REPERTOIRE, { sloppy: true, validateShapes: true });
+    if (!report.ok || report.warnings.length > 0) {
+       console.warn("RickChess Validator:\n" + formatValidationReport(report));
+    } else {
+       console.log("RickChess Validator: " + formatValidationReport(report));
+    }
+  }, []);
   
   // Study Mode State
   const [lineIdx, setLineIdx] = useState<number>(0);
@@ -30,9 +42,12 @@ export default function App() {
   const [trainLineIdx, setTrainLineIdx] = useState<number | null>(null);
   const [trainHadError, setTrainHadError] = useState(false);
   const [trainStatus, setTrainStatus] = useState<{type: 'info'|'ready'|'success'|'error', msg: string}>({type: 'info', msg: 'Cliquez sur "S\'entraîner au répertoire" pour commencer'});
-  const [trainStats, setTrainStats] = useState({ good: 0, bad: 0, streak: 0, xp: 0, srs: {} as Record<number, SRSItem> });
+  const [trainStats, setTrainStats] = useState<{good: number, bad: number, streak: number, xp: number, badges: string[], srs: Record<number, SRSItem>}>({ good: 0, bad: 0, streak: 0, xp: 0, badges: [], srs: {} });
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [hintSquare, setHintSquare] = useState<string | null>(null);
+
+  // Bagde Popup State
+  const [unlockedBadge, setUnlockedBadge] = useState<BadgeDef | null>(null);
 
   // Board State
   const [boardOrientation, setBoardOrientation] = useState<'white'|'black'>('white');
@@ -47,7 +62,7 @@ export default function App() {
     if (localStr) {
       try {
         const parsed = JSON.parse(localStr);
-        setTrainStats(s => ({ ...s, good: parsed.good || 0, bad: parsed.bad || 0, xp: parsed.xp || 0, srs: parsed.srs || {} }));
+        setTrainStats(s => ({ ...s, good: parsed.good || 0, bad: parsed.bad || 0, xp: parsed.xp || 0, badges: parsed.badges || [], srs: parsed.srs || {} }));
       } catch (e) {}
     }
   }, []);
@@ -63,21 +78,27 @@ export default function App() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const mergedSrs = data.srs || {};
-          setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, srs: mergedSrs }));
+          const badges = data.badges || [];
+          setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
           // Overwrite local with cloud
-          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, srs: mergedSrs }));
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
           // Update profile data in DB if changed
           if (data.displayName !== currentUser.displayName || data.photoURL !== currentUser.photoURL) {
-            updateDoc(docRef, { displayName: currentUser.displayName || 'Joueur Anonyme', photoURL: currentUser.photoURL || '' });
+            updateDoc(docRef, { 
+              displayName: currentUser.displayName || 'Joueur Anonyme', 
+              photoURL: currentUser.photoURL || '',
+              updatedAt: serverTimestamp()
+            });
           }
         } else {
           // Initialize in DB from local
           const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-          let startStats = { good: 0, bad: 0, xp: 0, srs: {} as Record<number, SRSItem> };
+          let startStats = { good: 0, bad: 0, xp: 0, badges: [] as string[], srs: {} as Record<number, SRSItem> };
           if (localStr) {
-             try { startStats = JSON.parse(localStr); } catch (e) {}
+             try { startStats = { ...startStats, ...JSON.parse(localStr) }; } catch (e) {}
           }
           if (!startStats.srs) startStats.srs = {};
+          if (!startStats.badges) startStats.badges = [];
           
           try {
             await setDoc(docRef, { 
@@ -96,12 +117,30 @@ export default function App() {
   }, []);
 
   // Sync stats when they change
-  const persistStats = useCallback(async (good: number, bad: number, xp: number, srs: Record<number, SRSItem>) => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good, bad, xp, srs }));
+  const persistStats = useCallback(async (good: number, bad: number, xp: number, streak: number, badges: string[], srs: Record<number, SRSItem>) => {
+    // Check for badgets before persisting!
+    const newUnlocked = evaluateBadges({ good, bad, streak, xp }, badges);
+    let finalBadges = badges;
+    
+    if (newUnlocked.length > 0) {
+      finalBadges = [...badges, ...newUnlocked];
+      const latestBadgeDef = BADGES.find(b => b.id === newUnlocked[newUnlocked.length - 1]);
+      if (latestBadgeDef) {
+        setUnlockedBadge(latestBadgeDef);
+        setTimeout(() => setUnlockedBadge(null), 5000);
+      }
+      playBadgeSound(); // Extra sound for badge
+      
+      // Only set trainStats here if we actually unlocked badges
+      setTrainStats(s => ({ ...s, badges: finalBadges }));
+    }
+
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good, bad, xp, badges: finalBadges, srs }));
+
     if (user) {
       try {
         const docRef = doc(db, 'users', user.uid);
-        await updateDoc(docRef, { good, bad, xp, srs, updatedAt: serverTimestamp() });
+        await updateDoc(docRef, { good, bad, xp, badges: finalBadges, srs, updatedAt: serverTimestamp() });
       } catch (e) {
         console.error("Could not persist stats", e);
       }
@@ -314,8 +353,8 @@ export default function App() {
 
   useEffect(() => {
     // When trainStats change, persist (local & cloud)
-    persistStats(trainStats.good, trainStats.bad, trainStats.xp, trainStats.srs);
-  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.srs, persistStats]);
+    persistStats(trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, trainStats.badges, trainStats.srs);
+  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, trainStats.badges, trainStats.srs, persistStats]);
 
   const handleSquareClick = (sq: string) => {
     if (mode !== 'train' || !trainLine || moveIdx >= trainLine.moves.length) return;
@@ -380,6 +419,28 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col font-body selection:bg-[#FCE300] selection:text-black bg-[#fdfaf6]">
+      
+      {/* BADGE UNLOCK POPUP */}
+      {unlockedBadge && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white border-[4px] border-black rounded-3xl p-8 max-w-md w-full text-center shadow-[12px_12px_0_0_#111] animate-in zoom-in-50 duration-500 flex flex-col items-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 left-0 h-32 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-100 to-transparent opacity-50"></div>
+            <div className="text-sm font-black uppercase tracking-widest text-[#EC4899] mb-4 relative z-10">NOUVEAU SUCCÈS</div>
+            <div className={cn("w-28 h-28 flex items-center justify-center rounded-full border-[4px] border-black text-6xl mb-6 shadow-[6px_6px_0_0_#111] rotate-12 relative z-10", unlockedBadge.bgColor)}>
+              {unlockedBadge.icon}
+            </div>
+            <h3 className="font-heading font-black text-3xl uppercase tracking-tighter mb-2 relative z-10">{unlockedBadge.name}</h3>
+            <p className="text-gray-600 font-bold mb-6 relative z-10">{unlockedBadge.description}</p>
+            <button 
+              onClick={() => setUnlockedBadge(null)} 
+              className="px-8 py-3 bg-black text-white font-black font-heading uppercase text-sm border-2 border-transparent rounded-full hover:bg-gray-800 transition-colors relative z-10"
+            >
+              Incroyable
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HEADER */}
       <header className="flex justify-between items-center px-4 sm:px-6 py-4 bg-white border-b-[3px] border-black z-20 sticky top-0 gap-4 overflow-x-auto custom-scrollbar">
         <button onClick={() => setMode('landing')} className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity shrink-0">
@@ -407,6 +468,16 @@ export default function App() {
                 {rankData.xpIntoLevel} / {rankData.xpNeededForNext} XP
              </div>
            </div>
+           {/* Display user badges */}
+           {trainStats.badges.length > 0 && (
+             <div className="flex items-center gap-1 mt-1 justify-center">
+               {trainStats.badges.map(bId => {
+                 const badge = BADGES.find(b => b.id === bId);
+                 if (!badge) return null;
+                 return <span key={bId} title={badge.name} className="text-xs">{badge.icon}</span>;
+               })}
+             </div>
+           )}
         </div>
 
         <nav className="flex gap-2 sm:gap-4 shrink-0">
@@ -844,7 +915,19 @@ function LeaderboardView() {
                   />
                   
                   <div className="flex-1 min-w-0">
-                    <div className="font-heading font-bold text-lg truncate">{leader.displayName || "Joueur Anonyme"}</div>
+                    <div className="font-heading font-bold text-lg truncate flex items-center gap-2">
+                       {leader.displayName || "Joueur Anonyme"}
+                       {/* Show Badges */}
+                       {leader.badges && leader.badges.length > 0 && (
+                          <div className="flex items-center gap-1 ml-2">
+                            {leader.badges.map((bId: string) => {
+                              const badge = BADGES.find(b => b.id === bId);
+                              if (!badge) return null;
+                              return <span key={bId} title={badge.name} className="text-xl drop-shadow-sm">{badge.icon}</span>;
+                            })}
+                          </div>
+                       )}
+                    </div>
                     <div className="text-xs uppercase font-black tracking-widest text-[#EC4899] truncate">{r.currentRank.name} (Lvl {r.currentRank.level})</div>
                   </div>
                   

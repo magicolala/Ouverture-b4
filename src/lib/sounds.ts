@@ -117,3 +117,20 @@ export function playSuccessSound() {
   playTone(440, 'sine', 0.15, 0.3, 0.01, 0.05);
   setTimeout(() => playTone(660, 'sine', 0.4, 0.3, 0.01, 0.3), 100);
 }
+
+// Badge/Level up: Triumphant Chords
+export function playBadgeSound() {
+  const ctx = getContext();
+  
+  // Arpeggio
+  const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+  
+  notes.forEach((freq, i) => {
+    setTimeout(() => {
+      // Main tone
+      playTone(freq, 'sine', 0.8, 0.4, 0.05, 0.6);
+      // Sparkle
+      playTone(freq * 2, 'triangle', 0.4, 0.1, 0.01, 0.3);
+    }, i * 150);
+  });
+}

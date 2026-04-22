@@ -12,7 +12,7 @@ service cloud.firestore {
     }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isSignedIn() { return request.auth != null; }
     
     // UserStats Validation logic
     function isValidUserStats(data) {
@@ -23,6 +23,7 @@ service cloud.firestore {
              && (!('srs' in data) || data.srs is map)
              && (!('displayName' in data) || data.displayName is string)
              && (!('photoURL' in data) || data.photoURL is string)
+             && (!('badges' in data) || data.badges is list)
              && data.updatedAt == request.time;
     }
 
@@ -38,7 +39,7 @@ service cloud.firestore {
                     && request.auth.uid == userId 
                     && isValidId(userId)
                     && isValidUserStats(incoming())
-                    && incoming().diff(existing()).affectedKeys().hasAny(['good', 'bad', 'xp', 'srs', 'displayName', 'photoURL', 'updatedAt']);
+                    && incoming().diff(existing()).affectedKeys().hasAny(['good', 'bad', 'xp', 'srs', 'displayName', 'photoURL', 'badges', 'updatedAt']);
                     
       allow delete: if false;
     }
