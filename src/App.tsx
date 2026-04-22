@@ -1,973 +1,167 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Chess } from 'chess.js';
-import { Board } from './components/Board';
-import { EvalBar } from './components/EvalBar';
-import { LichessStats } from './components/LichessStats';
-import { REPERTOIRE, RepertoireLine, MoveAnnotation, CHAPTERS, getStructuredRepertoire } from './data/repertoire';
-import { getRankData } from './lib/progression';
-import { calculateSRS, SRSItem } from './lib/srs';
-import { cn } from './utils';
-import { auth, loginWithGoogle, logout, db } from './firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { playMoveSound, playCaptureSound, playCastleSound, playErrorSound, playSuccessSound, playBadgeSound } from './lib/sounds';
-import { useStockfish } from './lib/useStockfish';
-import { evaluateBadges, BADGES, BadgeDef } from './lib/badges';
-import { validateRepertoire, formatValidationReport } from './lib/validateRepertoire';
-
-type ViewMode = 'landing' | 'study' | 'train' | 'leaderboard';
-const LOCAL_STORAGE_KEY = 'rickchess_stats';
+import { useEffect } from "react";
+import { ChessboardPanel } from "./components/ChessboardPanel";
+import { LearnPanel } from "./components/LearnPanel";
+import { PracticePanel } from "./components/PracticePanel";
+import { SessionComplete } from "./components/SessionComplete";
+import { RepertoireMenu } from "./components/RepertoireMenu";
+import { useSession } from "./engine/useSession";
+import {
+  playMoveSound,
+  playErrorSound,
+  playSuccessSound,
+} from "./lib/sounds";
+import { REPERTOIRE } from "./data/repertoire";
+import {
+  validateRepertoire,
+  formatValidationReport,
+} from "./lib/validateRepertoire";
 
 export default function App() {
-  const [game, setGame] = useState(new Chess());
-  const [mode, setMode] = useState<ViewMode>('landing');
-  const [user, setUser] = useState<User | null>(null);
+  const session = useSession({ opponentMoveDelayMs: 500 });
+  const { state, currentLine, fen, lastMove, expectedMove } = session;
 
-  // Validate repertoire on mount implicitly for the developer console
+  // Validation du répertoire au démarrage (dev only).
   useEffect(() => {
-    const report = validateRepertoire(REPERTOIRE, { sloppy: true, validateShapes: true });
+    const report = validateRepertoire(REPERTOIRE, {
+      sloppy: true,
+      validateShapes: true,
+    });
     if (!report.ok || report.warnings.length > 0) {
-       console.warn("RickChess Validator:\n" + formatValidationReport(report));
+      console.warn("Sokolsky Validator:\n" + formatValidationReport(report));
     } else {
-       console.log("RickChess Validator: " + formatValidationReport(report));
-    }
-  }, []);
-  
-  // Study Mode State
-  const [lineIdx, setLineIdx] = useState<number>(0);
-  const [moveIdx, setMoveIdx] = useState<number>(0);
-
-  // Train Mode State
-  const [trainLine, setTrainLine] = useState<RepertoireLine | null>(null);
-  const [trainLineIdx, setTrainLineIdx] = useState<number | null>(null);
-  const [trainHadError, setTrainHadError] = useState(false);
-  const [trainStatus, setTrainStatus] = useState<{type: 'info'|'ready'|'success'|'error', msg: string}>({type: 'info', msg: 'Cliquez sur "S\'entraîner au répertoire" pour commencer'});
-  const [trainStats, setTrainStats] = useState<{good: number, bad: number, streak: number, xp: number, badges: string[], srs: Record<number, SRSItem>}>({ good: 0, bad: 0, streak: 0, xp: 0, badges: [], srs: {} });
-  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [hintSquare, setHintSquare] = useState<string | null>(null);
-
-  // Bagde Popup State
-  const [unlockedBadge, setUnlockedBadge] = useState<BadgeDef | null>(null);
-
-  // Board State
-  const [boardOrientation, setBoardOrientation] = useState<'white'|'black'>('white');
-  const [stockfishEnabled, setStockfishEnabled] = useState(false);
-  
-  // Initialize Stockfish Hook
-  const { evalScore, mate, bestMove } = useStockfish(game.fen(), stockfishEnabled);
-
-  // Load from local storage immediately
-  useEffect(() => {
-    const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (localStr) {
-      try {
-        const parsed = JSON.parse(localStr);
-        setTrainStats(s => ({ ...s, good: parsed.good || 0, bad: parsed.bad || 0, xp: parsed.xp || 0, badges: parsed.badges || [], srs: parsed.srs || {} }));
-      } catch (e) {}
+      console.log("Sokolsky Validator: " + formatValidationReport(report));
     }
   }, []);
 
-  // Auth Listener
+  // Sons sur changements d'état.
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        // Fetch or create user stats
-        const docRef = doc(db, 'users', currentUser.uid);
-        try {
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const mergedSrs = data.srs || {};
-            const badges = data.badges || [];
-            setTrainStats(s => ({ ...s, good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
-            // Overwrite local with cloud
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good: data.good || 0, bad: data.bad || 0, xp: data.xp || 0, badges, srs: mergedSrs }));
-            // Update profile data in DB if changed
-            if (data.displayName !== currentUser.displayName || data.photoURL !== currentUser.photoURL) {
-              updateDoc(docRef, { 
-                displayName: currentUser.displayName || 'Joueur Anonyme', 
-                photoURL: currentUser.photoURL || '',
-                updatedAt: serverTimestamp()
-              }).catch(e => console.error("Could not update profile", e));
-            }
-          } else {
-            // Initialize in DB from local
-            const localStr = localStorage.getItem(LOCAL_STORAGE_KEY);
-            let startStats = { good: 0, bad: 0, xp: 0, badges: [] as string[], srs: {} as Record<number, SRSItem> };
-            if (localStr) {
-               try { startStats = { ...startStats, ...JSON.parse(localStr) }; } catch (e) {}
-            }
-            if (!startStats.srs) startStats.srs = {};
-            if (!startStats.badges) startStats.badges = [];
-            
-            try {
-              await setDoc(docRef, { 
-                ...startStats, 
-                displayName: currentUser.displayName || 'Nouveau Joueur',
-                photoURL: currentUser.photoURL || '',
-                updatedAt: serverTimestamp() 
-              });
-            } catch (e) {
-              console.error("Could not initialize user stats", e);
-            }
-          }
-        } catch (error) {
-          console.error("Could not fetch user stats:", error);
-        }
-      }
-    });
-    return () => unsubscribe();
-  }, []);
-
-  // Sync stats when they change
-  const persistStats = useCallback(async (good: number, bad: number, xp: number, streak: number, badges: string[], srs: Record<number, SRSItem>) => {
-    // Check for badgets before persisting!
-    const newUnlocked = evaluateBadges({ good, bad, streak, xp }, badges);
-    let finalBadges = badges;
-    
-    if (newUnlocked.length > 0) {
-      finalBadges = [...badges, ...newUnlocked];
-      const latestBadgeDef = BADGES.find(b => b.id === newUnlocked[newUnlocked.length - 1]);
-      if (latestBadgeDef) {
-        setUnlockedBadge(latestBadgeDef);
-        setTimeout(() => setUnlockedBadge(null), 5000);
-      }
-      playBadgeSound(); // Extra sound for badge
-      
-      // Only set trainStats here if we actually unlocked badges
-      setTrainStats(s => ({ ...s, badges: finalBadges }));
-    }
-
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ good, bad, xp, badges: finalBadges, srs }));
-
-    if (user) {
-      try {
-        const docRef = doc(db, 'users', user.uid);
-        await updateDoc(docRef, { good, bad, xp, badges: finalBadges, srs, updatedAt: serverTimestamp() });
-      } catch (e) {
-        console.error("Could not persist stats", e);
-      }
-    }
-  }, [user]);
-
-  // Derive active line based on mode
-  const activeLine = mode === 'study' ? REPERTOIRE[lineIdx] : trainLine;
-  const activeMoveIndex = mode === 'study' ? moveIdx : moveIdx; 
-
-  const updateGameState = useCallback(() => {
-    const newGame = new Chess();
-    let lastMoveObj = null;
-    if (activeLine && activeMoveIndex > 0) {
-      for (let i = 0; i < activeMoveIndex; i++) {
-        if (activeLine.moves[i]) {
-          lastMoveObj = newGame.move(activeLine.moves[i].san);
-        }
-      }
-    }
-    setGame(newGame);
-
-    // Play sound if we explicitly moved forward in study mode
-    if (lastMoveObj && mode === 'study') {
-      try {
-        if (lastMoveObj.flags.includes('c') || lastMoveObj.flags.includes('e')) {
-          playCaptureSound();
-        } else if (lastMoveObj.flags.includes('k') || lastMoveObj.flags.includes('q')) {
-          playCastleSound();
-        } else {
-          playMoveSound();
-        }
-      // eslint-disable-next-line no-empty
-      } catch (e) {}
-    }
-  }, [activeLine, activeMoveIndex, mode]);
-
-  useEffect(() => {
-    updateGameState();
-  }, [updateGameState]);
-
-  // Handle keyboard navigation for study mode
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (mode !== 'study' || !activeLine) return;
-      if (e.key === 'ArrowRight' && moveIdx < activeLine.moves.length) {
-        setMoveIdx(m => m + 1);
-      } else if (e.key === 'ArrowLeft' && moveIdx > 0) {
-        setMoveIdx(m => m - 1);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [mode, activeLine, moveIdx]);
-
-  // Get current move data
-  let lastMove = null;
-  if (activeMoveIndex > 0) {
-    const hist = game.history({ verbose: true });
-    if (hist.length > 0) {
-      const hm = hist[hist.length - 1];
-      lastMove = { from: hm.from, to: hm.to };
-    }
-  }
-
-  const currentAnnotation = activeMoveIndex > 0 && activeLine ? activeLine.moves[activeMoveIndex - 1] : undefined;
-
-  // Compute Spaced Repetition queues
-  const now = Date.now();
-  const dueReviewIds: number[] = [];
-  const newIds: number[] = [];
-  
-  REPERTOIRE.forEach((_, idx) => {
-    const item = trainStats.srs[idx];
-    if (!item) newIds.push(idx);
-    else if (item.nextReview <= now) dueReviewIds.push(idx);
-  });
-
-  // --- STUDY MODE ACTIONS ---
-  const handleSelectLine = (index: number) => {
-    setLineIdx(index);
-    setMoveIdx(0);
-  };
-
-  // --- TRAIN MODE ACTIONS (SRS) ---
-  const startTraining = () => {
-    let nextIdx = -1;
-    
-    // Chessable priority: Review first, then New
-    if (dueReviewIds.length > 0) {
-      // Pick the most overdue
-      nextIdx = dueReviewIds.sort((a, b) => trainStats.srs[a].nextReview - trainStats.srs[b].nextReview)[0];
-    } else if (newIds.length > 0) {
-      // Pick a random new line
-      nextIdx = newIds[Math.floor(Math.random() * newIds.length)];
-    } else {
-      setTrainStatus({type: 'success', msg: '🎉 Tout est à jour ! Vous maîtrisez votre répertoire. Revenez plus tard !'});
-      setTrainLine(null);
-      setTrainLineIdx(null);
-      return;
-    }
-
-    setTrainLineIdx(nextIdx);
-    setTrainLine(REPERTOIRE[nextIdx]);
-    setMoveIdx(0);
-    setTrainHadError(false);
-    setSelectedSquare(null);
-    setHintSquare(null);
-    setTrainStatus({type: 'ready', msg: `« ${REPERTOIRE[nextIdx].name} » — à vous, jouez le premier coup des Blancs.`});
-  };
-
-  const showHint = () => {
-    if (!trainLine || moveIdx >= trainLine.moves.length) return;
-    const expectedMove = trainLine.moves[moveIdx];
-    const tempGame = new Chess(game.fen());
-    const m = tempGame.move(expectedMove.san);
-    if (m) {
-      setHintSquare(m.from);
-      setTrainStatus({type: 'ready', msg: `💡 Indice : pièce sur ${m.from.toUpperCase()}`});
-      setTrainStats(s => ({...s, streak: 0}));
-      setTrainHadError(true);
-    }
-  };
-
-  const showAnswer = () => {
-    if (!trainLine || moveIdx >= trainLine.moves.length) return;
-    const expected = trainLine.moves[moveIdx];
-    const newGame = new Chess(game.fen());
-    newGame.move(expected.san);
-    setGame(newGame);
-    setMoveIdx(m => m + 1);
-    setHintSquare(null);
-    setSelectedSquare(null);
-    setTrainHadError(true);
-    setTrainStats(s => ({...s, streak: 0}));
-    setTrainStatus({type: 'error', msg: `Réponse : ${expected.san}. Mémorisez bien !`});
-    
-    // Set timeout to let black respond if needed
-    setTimeout(() => {
-      if (moveIdx + 1 >= trainLine.moves.length) {
-         setTrainStatus({type: 'error', msg: 'Ligne incomplète.'});
-         finishTraining(false);
-      } else {
-         playBlackResponse(moveIdx + 1, trainLine, newGame);
-      }
-    }, 1400);
-  };
-
-  const triggerMoveSound = (move: any) => {
-     if (move.flags.includes('c') || move.flags.includes('e')) {
-       playCaptureSound();
-     } else if (move.flags.includes('k') || move.flags.includes('q')) {
-       playCastleSound();
-     } else {
-       playMoveSound();
-     }
-  };
-
-  const playBlackResponse = (currentIdx: number, line: RepertoireLine, currentGame: Chess) => {
-    if (currentIdx >= line.moves.length) return;
-    
-    const blackMove = line.moves[currentIdx];
-    const nextGame = new Chess(currentGame.fen());
-    const m = nextGame.move(blackMove.san);
-    setGame(nextGame);
-    setMoveIdx(currentIdx + 1);
-    
-    if (m) triggerMoveSound(m);
-
-    if (currentIdx + 1 >= line.moves.length) {
-       finishTraining(true);
-    } else {
-       setTrainStatus({type: 'ready', msg: 'À vous ! Jouez le coup des Blancs.'});
-    }
-  };
-
-  const finishTraining = (success: boolean) => {
-    if (trainLineIdx === null) return;
-    
-    const finalErr = trainHadError || !success;
-
-    setTrainStats(s => {
-      // 1. Calculate new SRS Item
-      const nextSrsDict = { ...s.srs };
-      nextSrsDict[trainLineIdx] = calculateSRS(s.srs[trainLineIdx], success, finalErr);
-
-      // 2. Calculate XP
-      let xpGain = finalErr ? -2 : (s.streak * 2 + 15);
-      if (success && finalErr) xpGain = 5;
-
-      return {
-        ...s,
-        good: s.good + (success && !finalErr ? 1 : 0),
-        bad: s.bad + (finalErr ? 1 : 0),
-        streak: finalErr ? 0 : s.streak + 1,
-        xp: Math.max(0, s.xp + xpGain),
-        srs: nextSrsDict,
-      };
-    });
-
-    if (success && !finalErr) {
+    if (state.phase === "line-complete" && state.mode === "practice") {
       playSuccessSound();
-      setTrainStatus({type: 'success', msg: '🏆 Parfait ! Ligne maîtrisée. Passez à la suite !'});
-    } else if (success) {
-      setTrainStatus({type: 'success', msg: '✓ Terminé, mais avec des erreurs. À revoir bientôt !'});
-    } else {
-      setTrainStatus({type: 'error', msg: 'Ligne ratée, l\'intervalle de révision a été réinitialisé.'});
     }
-  };
+  }, [state.phase, state.mode]);
 
-  const srsJson = JSON.stringify(trainStats.srs);
-  const badgesJson = JSON.stringify(trainStats.badges);
+  const inSession = currentLine != null;
+  const showCompleteScreen =
+    state.phase === "line-complete" && state.mode === "practice";
+  const showSessionCompleteScreen =
+    state.phase === "session-complete" && state.queue.length > 0;
+  const hasNextLineInQueue = state.currentLineIndex + 1 < state.queue.length;
 
-  useEffect(() => {
-    // When trainStats change, persist (local & cloud)
-    persistStats(trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, trainStats.badges, trainStats.srs);
-  }, [trainStats.good, trainStats.bad, trainStats.xp, trainStats.streak, badgesJson, srsJson, persistStats]);
+  // En PRACTICE, annotations masquées tant que l'utilisateur cherche.
+  const showAnnotations = state.mode === "learn" || state.showSolution;
+  const arrowsToShow = showAnnotations ? expectedMove?.arrows : undefined;
+  const circlesToShow = showAnnotations ? expectedMove?.circles : undefined;
 
-  const handleSquareClick = (sq: string) => {
-    if (mode !== 'train' || !trainLine || moveIdx >= trainLine.moves.length) return;
-    
-    const expected = trainLine.moves[moveIdx];
-    
-    if (selectedSquare) {
-      if (selectedSquare === sq) {
-        setSelectedSquare(null);
-        return;
-      }
-      
-      const tempGame = new Chess(game.fen());
-      try {
-        const moveAttempt = tempGame.move({from: selectedSquare, to: sq, promotion: 'q'});
-        if (moveAttempt) {
-           if (moveAttempt.san === expected.san) {
-             // Correct move
-             triggerMoveSound(moveAttempt);
-             setGame(tempGame);
-             setMoveIdx(m => m + 1);
-             setSelectedSquare(null);
-             setHintSquare(null);
-             setTrainStatus({type: 'success', msg: `✓ ${expected.san} — bien joué !`});
-             
-             if (moveIdx + 1 >= trainLine.moves.length) {
-               finishTraining(true);
-             } else {
-               setTimeout(() => {
-                 playBlackResponse(moveIdx + 1, trainLine, tempGame);
-               }, 700);
-             }
-           } else {
-             // Wrong move
-             playErrorSound();
-             setTrainHadError(true);
-             setTrainStats(s => ({...s, streak: 0}));
-             setTrainStatus({type: 'error', msg: `✗ ${moveAttempt.san} n'est pas le coup attendu. Réessayez.`});
-             setSelectedSquare(null);
-           }
-        } else {
-          // Invalid move selection, just clear or re-select
-          const piece = game.get(sq as any);
-          if (piece && piece.color === game.turn()) {
-            setSelectedSquare(sq);
-          } else {
-            setSelectedSquare(null);
-          }
-        }
-      } catch (e) {
-        setSelectedSquare(null);
-      }
-    } else {
-      const piece = game.get(sq as any);
-      if (piece && piece.color === game.turn()) {
-        setSelectedSquare(sq);
-      }
+  const handleMove = ({
+    from,
+    to,
+    promotion,
+  }: {
+    from: string;
+    to: string;
+    promotion?: string;
+  }): boolean => {
+    const result = session.tryUserMove(from, to, promotion);
+    if (result === "ok") {
+      playMoveSound();
+      return true;
     }
+    if (result === "wrong") {
+      playErrorSound();
+      return false;
+    }
+    return false;
   };
-
-  const rankData = getRankData(trainStats.xp);
 
   return (
-    <div className="min-h-screen flex flex-col font-body selection:bg-[#FCE300] selection:text-black bg-[#fdfaf6]">
-      
-      {/* BADGE UNLOCK POPUP */}
-      {unlockedBadge && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white border-[4px] border-black rounded-3xl p-8 max-w-md w-full text-center shadow-[12px_12px_0_0_#111] animate-in zoom-in-50 duration-500 flex flex-col items-center relative overflow-hidden">
-            <div className="absolute top-0 right-0 left-0 h-32 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-yellow-100 to-transparent opacity-50"></div>
-            <div className="text-sm font-black uppercase tracking-widest text-[#EC4899] mb-4 relative z-10">NOUVEAU SUCCÈS</div>
-            <div className={cn("w-28 h-28 flex items-center justify-center rounded-full border-[4px] border-black text-6xl mb-6 shadow-[6px_6px_0_0_#111] rotate-12 relative z-10", unlockedBadge.bgColor)}>
-              {unlockedBadge.icon}
-            </div>
-            <h3 className="font-heading font-black text-3xl uppercase tracking-tighter mb-2 relative z-10">{unlockedBadge.name}</h3>
-            <p className="text-gray-600 font-bold mb-6 relative z-10">{unlockedBadge.description}</p>
-            <button 
-              onClick={() => setUnlockedBadge(null)} 
-              className="px-8 py-3 bg-black text-white font-black font-heading uppercase text-sm border-2 border-transparent rounded-full hover:bg-gray-800 transition-colors relative z-10"
-            >
-              Incroyable
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen bg-[#fdfaf6] text-gray-900">
+      {!inSession && <RepertoireMenu onStart={session.start} />}
 
-      {/* HEADER */}
-      <header className="flex justify-between items-center px-4 sm:px-6 py-4 bg-white border-b-[3px] border-black z-20 sticky top-0 gap-4 overflow-x-auto custom-scrollbar">
-        <button onClick={() => setMode('landing')} className="flex items-center gap-3 sm:gap-4 hover:opacity-80 transition-opacity shrink-0">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FCE300] border-[3px] border-black rounded-full flex items-center justify-center font-heading font-black text-xl sm:text-2xl shadow-[3px_3px_0_0_#111]">
-            ♞
-          </div>
-          <div className="hidden md:flex flex-col items-start min-w-[120px]">
-            <span className="font-heading font-black text-2xl uppercase leading-none tracking-tighter">Rick.Chess</span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Sokolsky Mastery</span>
-          </div>
-        </button>
-
-        {/* PROGRESSION WIDGET */}
-        <div className="hidden sm:flex flex-col justify-center px-4 shrink-0 mx-auto min-w-[200px] max-w-[300px]">
-           <div className="flex justify-between items-end mb-1">
-             <span className="text-[10px] uppercase font-black tracking-widest text-[#EC4899]">{rankData.currentRank.name}</span>
-             <span className="text-[10px] font-bold text-gray-400">LVL {rankData.currentRank.level}</span>
-           </div>
-           <div className="h-4 w-full bg-gray-100 border-2 border-black rounded-full overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] relative" title={`${trainStats.xp} XP`}>
-             <div 
-               className="h-full bg-[#FCE300] border-r-2 border-black transition-all duration-500"
-               style={{ width: `${Math.max(2, rankData.progressPercent)}%` }}
-             />
-             <div className="absolute inset-0 flex items-center justify-center text-[8px] font-black tracking-widest">
-                {rankData.xpIntoLevel} / {rankData.xpNeededForNext} XP
-             </div>
-           </div>
-           {/* Display user badges */}
-           {trainStats.badges.length > 0 && (
-             <div className="flex items-center gap-1 mt-1 justify-center">
-               {trainStats.badges.map(bId => {
-                 const badge = BADGES.find(b => b.id === bId);
-                 if (!badge) return null;
-                 return <span key={bId} title={badge.name} className="text-xs">{badge.icon}</span>;
-               })}
-             </div>
-           )}
-        </div>
-
-        <nav className="flex gap-2 sm:gap-4 shrink-0">
-          <button 
-            onClick={() => { setMode('study'); setMoveIdx(0); }}
-            className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
-              mode === 'study' ? "bg-[#3B82F6] text-white shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
-          >
-            <span className="text-sm">📖</span> <span className="hidden xl:inline">Étudier</span>
-          </button>
-          <button 
-            onClick={() => { setMode('train'); setMoveIdx(0); setTrainLine(null); }}
-            className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
-              mode === 'train' ? "bg-[#EC4899] text-white shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
-          >
-            <span className="text-sm">⚡</span> <span className="hidden xl:inline">S'entraîner</span>
-          </button>
-          <button 
-            onClick={() => setMode('leaderboard')}
-            className={cn("px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2", 
-              mode === 'leaderboard' ? "bg-[#EAB308] text-black shadow-[4px_4px_0_0_#111] -translate-y-1" : "bg-white text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]")}
-          >
-            <span className="text-sm">🏆</span> <span className="hidden xl:inline">Panthéon</span>
-          </button>
-          
-          {user ? (
-            <button 
-              onClick={logout}
-              className="px-4 py-2 sm:py-2.5 font-heading font-bold text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2 bg-[#84CC16] text-black hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]"
-              title={user.email || 'Déconnexion'}
-            >
-              <img src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || 'U'}&background=random`} alt="Avatar" className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 border-black" />
-              <span className="hidden lg:inline">{user.displayName?.split(' ')[0] || 'Joueur'}</span>
-            </button>
-          ) : (
-             <button 
-              onClick={loginWithGoogle}
-              className="px-4 sm:px-6 py-2 sm:py-2.5 font-heading font-extrabold uppercase text-xs sm:text-sm tracking-widest border-[3px] border-black rounded-full transition-all flex items-center gap-2 bg-black text-white hover:bg-gray-800 hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111]"
-            >
-              <span>Connexion</span>
-            </button>
-          )}
-        </nav>
-      </header>
-
-      {/* VIEW: LANDING */}
-      {mode === 'landing' && (
-        <div className="flex-1 flex flex-col animate-in fade-in zoom-in-95 duration-500">
-          {/* HUGE HERO SECTION */}
-          <div className="bg-[#FEF08A] border-b-[3px] border-black py-16 sm:py-24 px-6 flex flex-col justify-center items-center overflow-hidden relative flex-1 min-h-[70vh]">
-            {/* Abstract Rick background shapes */}
-            <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#3B82F6] rounded-full blur-[100px] sm:blur-[120px] opacity-30 mix-blend-multiply pointer-events-none" />
-            <div className="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#EC4899] rounded-full blur-[100px] sm:blur-[120px] opacity-30 mix-blend-multiply pointer-events-none" />
-            
-            <div className="text-center relative z-10 max-w-5xl mx-auto flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-black text-white font-black uppercase tracking-widest text-[10px] sm:text-xs rounded-full mb-8 shadow-[4px_4px_0_0_rgba(0,0,0,0.2)]">
-                <span className="w-2 h-2 rounded-full bg-[#84CC16] animate-pulse"></span>
-                Un répertoire complet et infaillible
-              </div>
-              <h1 className="font-heading font-black text-6xl sm:text-7xl md:text-[110px] leading-[0.85] tracking-tighter uppercase mb-6 sm:mb-8 drop-shadow-sm">
-                Maîtrisez <br/> l'Ouverture <br/> <span className="text-[#3B82F6] drop-shadow-[5px_5px_0_#111]">Sokolsky</span>
-              </h1>
-              <p className="font-medium text-lg sm:text-xl md:text-2xl max-w-2xl text-black/80 mb-10 sm:mb-12 px-4">
-                Surprenez vos adversaires dès le premier coup (1.b4). Mémorisez les lignes, comprenez les pièges, gagnez avec audace.
-              </p>
-              
-              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 w-full max-w-2xl px-4">
-                <button 
-                  onClick={() => { setMode('study'); setMoveIdx(0); }}
-                  className="group flex-1 w-full bg-[#3B82F6] text-white border-[3px] border-black px-6 sm:px-8 py-4 sm:py-5 rounded-2xl font-heading font-black text-lg sm:text-xl uppercase tracking-widest shadow-[6px_6px_0_0_#111] hover:bg-[#2563EB] hover:translate-y-1 hover:shadow-[2px_2px_0_0_#111] transition-all flex items-center justify-center gap-3"
-                >
-                  <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">📖</span>
-                  <span>Apprendre</span>
-                </button>
-                <button 
-                  onClick={() => { setMode('train'); startTraining(); }}
-                  className="group flex-1 w-full bg-[#EC4899] text-white border-[3px] border-black px-6 sm:px-8 py-4 sm:py-5 rounded-2xl font-heading font-black text-lg sm:text-xl uppercase tracking-widest shadow-[6px_6px_0_0_#111] hover:bg-[#DB2777] hover:translate-y-1 hover:shadow-[2px_2px_0_0_#111] transition-all flex items-center justify-center gap-3"
-                >
-                  <span className="text-2xl sm:text-3xl group-hover:scale-110 transition-transform">⚡</span>
-                  <span>S'entraîner</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          {/* FEATURES SECTION */}
-          <div className="py-16 sm:py-24 px-6 max-w-7xl mx-auto w-full grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-            <div className="bg-white border-[3px] border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0_0_#111] hover:-translate-y-2 hover:shadow-[12px_12px_0_0_#111] transition-all">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#FCE300] border-[3px] border-black rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-[4px_4px_0_0_#111] mb-6">
-                🧠
-              </div>
-              <h3 className="font-heading font-black text-xl sm:text-2xl uppercase tracking-tighter mb-3 sm:mb-4">Compréhension Profonde</h3>
-              <p className="text-gray-600 font-medium text-base sm:text-lg">Chaque coup est expliqué avec des annotations graphiques et un texte pédagogique clair, centré sur les plans stratégiques et non la mémorisation bête.</p>
-            </div>
-            <div className="bg-white border-[3px] border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0_0_#111] hover:-translate-y-2 hover:shadow-[12px_12px_0_0_#111] transition-all">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#EC4899] border-[3px] border-black rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-[4px_4px_0_0_#111] mb-6">
-                ⚔️
-              </div>
-              <h3 className="font-heading font-black text-xl sm:text-2xl uppercase tracking-tighter mb-3 sm:mb-4">Pièges Mortels</h3>
-              <p className="text-gray-600 font-medium text-base sm:text-lg">Découvrez les fautes typiques des débutants contre b4 et punissez-les sévèrement. La grande diagonale a1-h8 n'aura plus de secrets pour vous.</p>
-            </div>
-            <div className="bg-white border-[3px] border-black rounded-3xl p-6 sm:p-8 shadow-[8px_8px_0_0_#111] hover:-translate-y-2 hover:shadow-[12px_12px_0_0_#111] transition-all">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-[#3B82F6] border-[3px] border-black rounded-2xl flex items-center justify-center text-2xl sm:text-3xl shadow-[4px_4px_0_0_#111] mb-6">
-                🎯
-              </div>
-              <h3 className="font-heading font-black text-xl sm:text-2xl uppercase tracking-tighter mb-3 sm:mb-4">Répétition Spacée</h3>
-              <p className="text-gray-600 font-medium text-base sm:text-lg">Testez vos réflexes en mode "Entraînement". L'adversaire virtuel joue les coups critiques, à vous de jouer la réponse parfaite du répertoire.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* VIEW: LEADERBOARD */}
-      {mode === 'leaderboard' && (
-        <LeaderboardView />
-      )}
-
-      {/* VIEW: STUDY OR TRAIN */}
-      {mode !== 'landing' && mode !== 'leaderboard' && (
-        <main className="flex-1 max-w-[1400px] mx-auto w-full p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start relative z-10 pt-6 sm:pt-8 animate-in fade-in duration-300">
-          
-          {/* LEFT COLUMN: Sidebar variations */}
-          <div className={cn("lg:col-span-3 space-y-4", mode === 'train' ? "hidden lg:block opacity-50 pointer-events-none grayscale" : "block")}>
-            <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-5 shadow-[6px_6px_0_0_#111] max-h-[50vh] lg:max-h-[calc(100vh-140px)] overflow-y-auto">
-              <h2 className="font-heading font-black text-xl uppercase tracking-tighter mb-4 border-b-[3px] border-black pb-2 flex justify-between items-center">
-                Variantes <span className="text-xs bg-black text-white px-2 py-0.5 rounded-md font-body">{REPERTOIRE.length}</span>
-              </h2>
-              {getStructuredRepertoire().map((chapter) => (
-                <div key={chapter.id} className="mb-8 last:mb-0">
-                  <h3 className="text-[13px] font-black uppercase tracking-widest text-black mb-2 border-b-2 border-dashed border-black/20 pb-2">{chapter.title}</h3>
-                  <p className="text-[11px] text-gray-500 font-medium mb-4 ml-1 leading-tight">{chapter.description}</p>
-                  
-                  {chapter.subchapters.map((subchapter) => {
-                    if (subchapter.lines.length === 0) return null;
-                    return (
-                      <div key={subchapter.id} className="mb-6 ml-1 last:mb-0 border-l-[3px] border-black/10 pl-3">
-                        <h4 className="text-[10px] font-black uppercase tracking-wider text-[#EC4899] mb-1">{subchapter.title}</h4>
-                        <p className="text-[10px] text-gray-500 italic mb-3 leading-tight">{subchapter.description}</p>
-                        <div className="space-y-2">
-                          {subchapter.lines.map((line) => {
-                            const idx = REPERTOIRE.indexOf(line);
-                            if (idx === -1) return null;
-                            const isActive = mode === 'study' && lineIdx === idx;
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => { setMode('study'); handleSelectLine(idx); }}
-                                className={cn(
-                                  "block w-full text-left px-3 sm:px-4 py-2 sm:py-3 rounded-xl border-[3px] font-bold text-xs sm:text-sm transition-all relative overflow-hidden",
-                                  isActive ? "border-black bg-[#FCE300] shadow-[3px_3px_0_0_#111] translate-x-1" : "border-transparent hover:border-black/20 text-gray-600 hover:bg-gray-100"
-                                )}
-                              >
-                                {isActive && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-black" />}
-                                <div className="flex flex-col gap-1">
-                                  <div className="flex justify-between items-start gap-2">
-                                    <span className={cn("inline-block leading-tight", isActive ? "text-black pl-1" : "text-gray-800")}>{line.name}</span>
-                                    {line.priority === 'must-know' && (
-                                      <span className="shrink-0 mt-0.5 text-[9px] bg-[#EC4899] text-white px-1.5 py-0.5 rounded font-black uppercase shadow-[1px_1px_0_0_#111]">Socle</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+      {inSession && state.queue.length > 0 && (
+        <div className="max-w-6xl mx-auto p-4 flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0">
+            <ChessboardPanel
+              fen={fen}
+              arrows={arrowsToShow}
+              circles={circlesToShow}
+              lastMove={lastMove}
+              orientation="white"
+              disabled={
+                state.phase === "waiting-opponent" ||
+                state.phase === "line-complete" ||
+                state.phase === "session-complete" ||
+                state.showSolution
+              }
+              onMove={handleMove}
+            />
+            <div className="mt-2 text-center text-xs text-gray-500">
+              Ligne {state.currentLineIndex + 1} / {state.queue.length}
             </div>
           </div>
 
-          {/* MIDDLE COLUMN: Chess board */}
-          <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="w-full max-w-[500px]">
-              <div className="bg-white border-[3px] border-black p-2 sm:p-4 rounded-3xl shadow-[6px_6px_0_0_#111] sm:shadow-[8px_8px_0_0_#111] mb-6 relative ml-[24px] sm:ml-[36px]">
-                {stockfishEnabled && <EvalBar evalScore={evalScore} mate={mate} orientation={boardOrientation} />}
-                <Board 
-                  game={game} 
-                  orientation={boardOrientation}
-                  lastMove={lastMove}
-                  hintSquare={hintSquare}
-                  selectedSquare={selectedSquare}
-                  onSquareClick={handleSquareClick}
-                  annotations={
-                    (mode === 'study' || mode === 'train') ? {
-                      arrows: currentAnnotation?.arrows,
-                      circles: currentAnnotation?.circles
-                    } : undefined
-                  }
-                />
-              </div>
-              
-              <div className="flex items-center gap-2 mb-4 ml-[24px] sm:ml-[36px]">
-                 <button 
-                   onClick={() => setBoardOrientation(o => o === 'white' ? 'black' : 'white')}
-                   className="flex-1 bg-white border-[3px] border-black rounded-full px-2 py-3 font-heading font-extrabold text-[10px] sm:text-xs uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2"
-                 >
-                   <span>⬇️ Retourner</span>
-                 </button>
-                 <button 
-                   onClick={() => setStockfishEnabled(s => !s)}
-                   className={cn(
-                     "flex-1 border-[3px] border-black rounded-full px-2 py-3 font-heading font-extrabold text-[10px] sm:text-xs uppercase tracking-widest shadow-[4px_4px_0_0_#111] hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#111] transition-all flex justify-center items-center gap-2",
-                     stockfishEnabled ? "bg-[#3B82F6] text-white" : "bg-white text-black hover:bg-gray-100"
-                   )}
-                 >
-                   <span>{stockfishEnabled ? '🤖 Stop Eval' : '🤖 Activer Eval'}</span>
-                 </button>
-              </div>
-
-              {/* STUDY Board Controls */}
-              {mode === 'study' && activeLine && (
-                <div className="flex justify-between items-center bg-white border-[3px] border-black rounded-full p-2 shadow-[4px_4px_0_0_#111] ml-[24px] sm:ml-[36px]">
-                  <button onClick={() => setMoveIdx(0)} disabled={moveIdx === 0} className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center font-black text-lg sm:text-xl rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors">⏮</button>
-                  <button onClick={() => setMoveIdx(m => Math.max(0, m - 1))} disabled={moveIdx === 0} className="px-3 sm:px-6 h-10 sm:h-14 font-heading font-extrabold uppercase rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors text-[10px] sm:text-sm">Précédent</button>
-                  <button onClick={() => setMoveIdx(m => Math.min(activeLine.moves.length, m + 1))} disabled={moveIdx >= activeLine.moves.length} className="px-3 sm:px-6 h-10 sm:h-14 font-heading font-extrabold text-white bg-black uppercase rounded-full hover:bg-gray-800 transition-colors disabled:opacity-30 text-[10px] sm:text-sm">Suivant</button>
-                  <button onClick={() => setMoveIdx(activeLine.moves.length)} disabled={moveIdx >= activeLine.moves.length} className="w-10 h-10 sm:w-14 sm:h-14 flex items-center justify-center font-black text-lg sm:text-xl rounded-full hover:bg-gray-100 disabled:opacity-30 transition-colors">⏭</button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT COLUMN: Info / Comments */}
-          <div className="lg:col-span-4 h-full flex flex-col gap-6 w-full">
-            
-            {mode === 'train' ? (
-              // TRAIN MODE PANEL
-              <div className="space-y-4 sm:space-y-6">
-                 <div className="grid grid-cols-3 gap-2 sm:gap-4">
-                    <div className="bg-white border-[3px] border-black rounded-2xl p-3 sm:p-4 text-center shadow-[4px_4px_0_0_#111]">
-                      <div className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1">Réussis</div>
-                      <div className="text-2xl sm:text-3xl font-black text-[#84CC16]">{trainStats.good}</div>
-                    </div>
-                    <div className="bg-white border-[3px] border-black rounded-2xl p-3 sm:p-4 text-center shadow-[4px_4px_0_0_#111]">
-                       <div className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1">Ratés</div>
-                       <div className="text-2xl sm:text-3xl font-black text-[#EC4899]">{trainStats.bad}</div>
-                    </div>
-                    <div className="bg-white border-[3px] border-black rounded-2xl p-3 sm:p-4 text-center shadow-[4px_4px_0_0_#111]">
-                       <div className="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-1">Série</div>
-                       <div className="text-2xl sm:text-3xl font-black text-[#3B82F6]">{trainStats.streak}</div>
-                    </div>
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-                   <div className="bg-white border-2 border-black rounded-lg p-2 text-center shadow-[2px_2px_0_0_#111]">
-                     <div className="text-[10px] uppercase font-black tracking-widest text-[#EC4899]">À Réviser</div>
-                     <div className="text-xl font-black">{dueReviewIds.length}</div>
-                   </div>
-                   <div className="bg-white border-2 border-black rounded-lg p-2 text-center shadow-[2px_2px_0_0_#111]">
-                     <div className="text-[10px] uppercase font-black tracking-widest text-[#3B82F6]">Nouvelles</div>
-                     <div className="text-xl font-black">{newIds.length}</div>
-                   </div>
-                 </div>
-
-                 <div className={cn(
-                   "border-[3px] border-black rounded-2xl p-4 sm:p-6 font-bold text-center shadow-[4px_4px_0_0_#111] transition-colors text-sm sm:text-lg",
-                   trainStatus.type === 'ready' && "bg-[#FCE300]",
-                   trainStatus.type === 'success' && "bg-[#84CC16] text-white",
-                   trainStatus.type === 'error' && "bg-[#EC4899] text-white",
-                   trainStatus.type === 'info' && "bg-white"
-                 )}>
-                   {trainStatus.msg}
-                 </div>
-
-                 <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
-                   <button onClick={startTraining} className="col-span-2 py-3 sm:py-4 bg-black text-white font-heading font-black uppercase tracking-widest border-[3px] border-black rounded-xl transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111] text-sm sm:text-lg">
-                     {trainStatus.type === 'info' || trainStatus.type === 'success' || !trainLine ? "Démarrer l'entraînement" : "Passer cette ligne"}
-                   </button>
-                   <button onClick={showHint} disabled={!trainLine} className="py-3 sm:py-4 bg-[#FCE300] text-black font-heading font-bold uppercase tracking-widest border-[3px] border-black rounded-xl transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none text-xs sm:text-sm">
-                     Indice
-                   </button>
-                   <button onClick={showAnswer} disabled={!trainLine} className="py-3 sm:py-4 bg-[#EC4899] text-white font-heading font-bold uppercase tracking-widest border-[3px] border-black rounded-xl transition hover:-translate-y-1 hover:shadow-[4px_4px_0_0_#111] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none text-xs sm:text-sm">
-                     Réponse
-                   </button>
-                 </div>
-                 
-                 {/* Show comment if answered */}
-                 {currentAnnotation?.comment && trainHadError && (
-                   <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-6 shadow-[6px_6px_0_0_#111] mt-4 sm:mt-6 animate-in fade-in zoom-in-95">
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className="bg-[#3B82F6] text-white px-3 py-1 rounded-full font-black text-xs sm:text-sm border-2 border-black">
-                        {Math.ceil(activeMoveIndex / 2)}.{activeMoveIndex % 2 === 0 ? ".." : ""}{currentAnnotation.san}
-                      </span>
-                      <span className="font-heading font-bold uppercase tracking-widest text-[#EC4899] text-xs sm:text-sm">💡 Conseil tactique</span>
-                    </div>
-                    <div className="text-sm sm:text-lg leading-relaxed font-medium text-gray-800" dangerouslySetInnerHTML={{ __html: currentAnnotation.comment }} />
-                   </div>
-                 )}
-              </div>
-            ) : (
-              // STUDY MODE PANEL
-              <div className="bg-white border-[3px] border-black rounded-2xl p-4 sm:p-6 shadow-[6px_6px_0_0_#111] lg:h-[calc(100vh-140px)] min-h-[400px] flex flex-col">
-                <div className="flex justify-between items-start mb-4 sm:mb-6 border-b-[3px] border-black pb-4 shrink-0">
-                  <div>
-                    <div className="text-[10px] uppercase font-bold tracking-widest text-gray-500 mb-2">Analyse Strategique</div>
-                    <div className="text-3xl sm:text-4xl font-black tracking-tighter text-[#3B82F6]">
-                      {activeMoveIndex === 0 ? "START" : 
-                       <span className="flex items-center gap-2">
-                         {Math.ceil(activeMoveIndex / 2)}.{activeMoveIndex % 2 === 0 ? ".." : ""}{currentAnnotation?.san}
-                       </span>
-                      }
-                    </div>
-                  </div>
-                  {activeMoveIndex > 0 && currentAnnotation?.arrows?.length ? (
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#84CC16] border-[3px] border-black rounded-full flex items-center justify-center shadow-[2px_2px_0_0_#111]">
-                      <span className="font-black text-white text-lg sm:text-xl">✓</span>
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="mb-4 sm:mb-6 shrink-0 max-h-[30vh] overflow-y-auto pr-2 custom-scrollbar">
-                  {activeMoveIndex === 0 ? (
-                    <div className="bg-[#f0f9ff] border-2 border-[#bae6fd] p-3 sm:p-4 rounded-xl text-sm sm:text-lg text-[#0369a1] font-medium">
-                      {activeLine?.description ? (
-                        <span><strong className="block mb-2 font-black uppercase text-xs tracking-wider text-[#0284c7]">Description de la ligne</strong> {activeLine.description}</span>
-                      ) : (
-                        <span>Naviguez avec les flèches ou les boutons de la barre de contrôle pour étudier chaque coup de la variante étape par étape.</span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-sm sm:text-lg leading-relaxed font-medium text-gray-800" dangerouslySetInnerHTML={{ __html: currentAnnotation?.comment || '<em class="text-gray-400">Le plan suit son cours. Sortez vos pièces et luttez pour le centre.</em>' }} />
-                  )}
-                </div>
-
-                <LichessStats fen={game.fen()} />
-
-                {/* STOCKFISH PANEL */}
-                {stockfishEnabled && (
-                  <div className="bg-[#111] text-white border-[3px] border-black rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 shadow-[4px_4px_0_0_#FFF] sm:shadow-[6px_6px_0_0_#eab308]">
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="text-[10px] uppercase font-bold tracking-widest text-gray-400">Évaluation Moteur</div>
-                      <div className="text-xs bg-[#2a2a2a] px-2 py-1 rounded text-green-400 font-mono">
-                        {mate !== null ? `MATE ${mate}` : (evalScore > 0 ? '+' : '') + evalScore.toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] uppercase font-bold tracking-widest text-[#EC4899] mb-1">Meilleur Coup</div>
-                      <div className="font-mono font-bold text-lg sm:text-xl text-[#FCE300]">
-                        {bestMove || "Calcul..."}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Move list */}
-                <div className="flex-1 bg-[#fdfaf6] border-[3px] border-black rounded-xl p-3 sm:p-4 overflow-y-auto shadow-[inset_0_2px_10px_rgba(0,0,0,0.05)] min-h-[200px] custom-scrollbar">
-                  <div className="text-[10px] uppercase font-black tracking-widest text-[#EC4899] mb-3 sm:mb-4 border-b-2 border-dashed border-black/20 pb-2">Déroulé théorique</div>
-                  {activeLine && (
-                    <div className="space-y-1">
-                      {Array.from({ length: Math.ceil(activeLine.moves.length / 2) }).map((_, i) => {
-                        const whiteMoveIdx = i * 2;
-                        const blackMoveIdx = i * 2 + 1;
-                        const whiteMove = activeLine.moves[whiteMoveIdx];
-                        const blackMove = activeLine.moves[blackMoveIdx];
-
-                        return (
-                          <div key={i} className="grid grid-cols-[20px_1fr_1fr] sm:grid-cols-[30px_1fr_1fr] items-center gap-1 sm:gap-2 py-1">
-                            <span className="font-black text-gray-400 text-xs sm:text-sm text-right pr-1 sm:pr-2">{i + 1}.</span>
-                            <button 
-                              onClick={() => setMoveIdx(whiteMoveIdx + 1)}
-                              className={cn(
-                                "text-left px-2 sm:px-3 py-1.5 rounded-md font-bold transition-all border-2 text-[10px] sm:text-sm",
-                                activeMoveIndex === whiteMoveIdx + 1 ? "bg-black text-white border-black scale-[1.02]" : "border-transparent text-gray-700 hover:bg-gray-200"
-                              )}>
-                                {whiteMove?.san}
-                            </button>
-                            <button 
-                              onClick={() => blackMove && setMoveIdx(blackMoveIdx + 1)}
-                              disabled={!blackMove}
-                              className={cn(
-                                "text-left px-2 sm:px-3 py-1.5 rounded-md font-bold transition-all border-2 text-[10px] sm:text-sm",
-                                !blackMove && "opacity-0",
-                                activeMoveIndex === blackMoveIdx + 1 ? "bg-[#3B82F6] text-white border-black shadow-[2px_2px_0_0_#111] scale-[1.02]" : "border-transparent text-gray-700 hover:bg-gray-200"
-                              )}>
-                                {blackMove?.san}
-                            </button>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
+          <aside className="w-full lg:w-[380px] flex flex-col gap-4">
+            {currentLine && showSessionCompleteScreen && (
+              <SessionComplete
+                mode={state.mode}
+                line={currentLine}
+                stats={state.stats}
+                hasNextLine={false}
+                onNextLine={() => {}}
+                onRestart={session.restartLine}
+                onExit={session.exit}
+              />
             )}
-          </div>
-        </main>
-      )}
-      
-      <footer className={cn("mt-auto border-t-[3px] border-black bg-white p-4 sm:p-6 flex justify-between items-center z-10 w-full relative", mode === 'landing' ? "mt-0" : "mt-8")}>
-        <div className="font-heading font-black text-xl sm:text-2xl uppercase tracking-tighter flex items-center gap-2">
-          <span className="text-[#EC4899]">Rick</span>.Chess
+
+            {currentLine &&
+              !showSessionCompleteScreen &&
+              showCompleteScreen && (
+                <SessionComplete
+                  mode={state.mode}
+                  line={currentLine}
+                  stats={state.stats}
+                  hasNextLine={hasNextLineInQueue}
+                  onNextLine={session.nextLine}
+                  onRestart={session.restartLine}
+                  onExit={session.exit}
+                />
+              )}
+
+            {currentLine &&
+              !showCompleteScreen &&
+              !showSessionCompleteScreen &&
+              state.mode === "learn" && (
+                <LearnPanel
+                  line={currentLine}
+                  currentMoveIndex={state.currentMoveIndex}
+                  expectedMove={expectedMove}
+                  isLineComplete={state.phase === "line-complete"}
+                  onAdvance={session.advanceLearn}
+                  onFinishLine={session.finishLearnLine}
+                  onExit={session.exit}
+                />
+              )}
+
+            {currentLine &&
+              !showCompleteScreen &&
+              !showSessionCompleteScreen &&
+              state.mode === "practice" && (
+                <PracticePanel
+                  line={currentLine}
+                  currentMoveIndex={state.currentMoveIndex}
+                  expectedMove={expectedMove}
+                  attemptsOnCurrentMove={state.attemptsOnCurrentMove}
+                  showSolution={state.showSolution}
+                  lastError={state.lastError}
+                  isUserTurn={session.isUserTurn}
+                  isWaitingOpponent={state.phase === "waiting-opponent"}
+                  onContinueAfterSolution={session.continueAfterSolution}
+                  onRestart={session.restartLine}
+                  onExit={session.exit}
+                />
+              )}
+          </aside>
         </div>
-        <div className="text-[10px] uppercase font-bold tracking-[0.2em] text-gray-500">© 2026 Sokolsky Mastery</div>
-      </footer>
-    </div>
-  );
-}
-
-// ============================================
-// LEADERBOARD COMPONENT
-// ============================================
-function LeaderboardView() {
-  const [leaders, setLeaders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchLeaders() {
-      try {
-        const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
-        const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setLeaders(data);
-      } catch (e) {
-        console.error("Erreur giga Leaderboard:", e);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchLeaders();
-  }, []);
-
-  return (
-    <div className="flex-1 flex flex-col p-4 sm:p-8 animate-in fade-in zoom-in-95 duration-500 max-w-4xl mx-auto w-full">
-      <div className="text-center mb-8">
-        <h2 className="font-heading font-black text-5xl sm:text-6xl uppercase tracking-tighter text-[#EAB308] drop-shadow-[4px_4px_0_#111]">
-          Le Panthéon
-        </h2>
-        <p className="text-gray-600 font-bold uppercase tracking-widest mt-2">Les maîtres incontestés de la Sokolsky</p>
-      </div>
-
-      <div className="bg-white border-[3px] border-black rounded-3xl p-4 sm:p-8 shadow-[8px_8px_0_0_#111]">
-        {loading ? (
-          <div className="text-center py-10 font-bold text-gray-500 animate-pulse">Chargement des légendes...</div>
-        ) : leaders.length === 0 ? (
-          <div className="text-center py-10 font-bold text-gray-500">Aucun joueur dans le classement pour le moment.</div>
-        ) : (
-          <div className="space-y-4">
-            {leaders.map((leader, index) => {
-              const r = getRankData(leader.xp || 0);
-              return (
-                <div key={leader.id} className="flex items-center gap-4 bg-gray-50 border-2 border-black rounded-2xl p-4 hover:-translate-y-1 transition-transform shadow-[4px_4px_0_0_#111]">
-                  <div className={cn(
-                    "w-12 h-12 flex items-center justify-center font-black text-xl rounded-full border-2 border-black shrink-0",
-                    index === 0 ? "bg-[#FCE300]" : index === 1 ? "bg-gray-300" : index === 2 ? "bg-orange-300" : "bg-white"
-                  )}>
-                    {index + 1}
-                  </div>
-                  
-                  <img 
-                    src={leader.photoURL || `https://ui-avatars.com/api/?name=${leader.displayName || 'U'}&background=random`} 
-                    alt="Avatar" 
-                    className="w-12 h-12 rounded-full border-2 border-black object-cover shrink-0" 
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-heading font-bold text-lg truncate flex items-center gap-2">
-                       {leader.displayName || "Joueur Anonyme"}
-                       {/* Show Badges */}
-                       {leader.badges && leader.badges.length > 0 && (
-                          <div className="flex items-center gap-1 ml-2">
-                            {leader.badges.map((bId: string) => {
-                              const badge = BADGES.find(b => b.id === bId);
-                              if (!badge) return null;
-                              return <span key={bId} title={badge.name} className="text-xl drop-shadow-sm">{badge.icon}</span>;
-                            })}
-                          </div>
-                       )}
-                    </div>
-                    <div className="text-xs uppercase font-black tracking-widest text-[#EC4899] truncate">{r.currentRank.name} (Lvl {r.currentRank.level})</div>
-                  </div>
-                  
-                  <div className="text-right shrink-0">
-                    <div className="font-black text-2xl text-[#3B82F6]">{leader.xp || 0}</div>
-                    <div className="text-[10px] uppercase font-bold text-gray-500">XP</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
