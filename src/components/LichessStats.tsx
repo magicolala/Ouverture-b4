@@ -9,17 +9,34 @@ export function LichessStats({ fen }: { fen: string }) {
     moves: { san: string, white: number, draws: number, black: number, total: number }[]
   } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [showTokenInput, setShowTokenInput] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem('lichess_token') || '');
 
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+    setIsUnauthorized(false);
 
     const fetchStats = async () => {
       try {
-        // Query Lichess API for the given position
-        // speeds=blitz,rapid,classical and ratings=1600-2200 (focus on club/tournament players)
-        const url = `https://explorer.lichess.ovh/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=1600,1800,2000,2200&fen=${encodeURIComponent(fen)}`;
-        const res = await fetch(url);
+        const url = `https://explorer.lichess.org/lichess?variant=standard&speeds=blitz,rapid,classical&ratings=1600,1800,2000,2200&fen=${encodeURIComponent(fen)}`;
+        
+        const headers: Record<string, string> = {
+          'Accept': 'application/json',
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(url, { headers });
+        
+        if (res.status === 401) {
+          if (isMounted) setIsUnauthorized(true);
+          throw new Error('Unauthorized');
+        }
+        
         if (!res.ok) throw new Error('API error');
         const data = await res.json();
         
@@ -41,37 +58,81 @@ export function LichessStats({ fen }: { fen: string }) {
         }
       } catch (e) {
          if (isMounted) {
-           setStats(null);
+           if (e instanceof Error && e.message !== 'Unauthorized') {
+             setStats(null);
+           }
            setLoading(false);
          }
       }
     };
 
-    // Debounce to respect Lichess 1 request/second rate limits
     const timer = setTimeout(fetchStats, 600);
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [fen]);
+  }, [fen, token]);
 
-  if (loading && !stats) {
+  const handleSaveToken = (newToken: string) => {
+    localStorage.setItem('lichess_token', newToken);
+    setToken(newToken);
+    setShowTokenInput(false);
+  };
+
+  if (loading && !stats && !isUnauthorized) {
      return (
        <div className="bg-white border-[3px] border-black/10 rounded-xl p-3 pt-2 mb-4 sm:mb-6 animate-pulse shrink-0">
           <div className="flex justify-between items-baseline mb-2 border-b-2 border-dashed border-black/5 pb-1">
             <div className="h-3 w-1/3 bg-gray-200 rounded"></div>
           </div>
           <div className="h-6 w-full bg-gray-200 rounded-full mb-3"></div>
-          <div className="space-y-2">
-            <div className="h-4 w-full bg-gray-100 rounded"></div>
-            <div className="h-4 w-5/6 bg-gray-100 rounded"></div>
-          </div>
        </div>
      );
   }
 
+  if (isUnauthorized) {
+    return (
+      <div className="bg-orange-50 border-2 border-orange-200 p-3 rounded-xl mb-4 text-xs">
+        <p className="font-bold text-orange-800 flex items-center gap-2">
+          ⚠️ Authentification Lichess requise
+        </p>
+        <p className="text-orange-700 mt-1">
+          Lichess bloque l'accès anonyme. Pour voir les stats, renseignez un jeton (PAT).
+        </p>
+        {!showTokenInput ? (
+          <button 
+            onClick={() => setShowTokenInput(true)}
+            className="mt-2 text-blue-600 font-bold underline underline-offset-2"
+          >
+            Configurer mon jeton Lichess
+          </button>
+        ) : (
+          <div className="mt-2 flex gap-2">
+            <input 
+              type="password"
+              placeholder="Votre jeton Lichess (lip_...)"
+              className="flex-1 px-2 py-1 border border-orange-300 rounded text-[10px]"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSaveToken((e.target as HTMLInputElement).value);
+              }}
+            />
+            <button 
+              onClick={(e) => {
+                const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                handleSaveToken(input.value);
+              }}
+              className="px-2 py-1 bg-orange-600 text-white rounded font-bold"
+            >
+              OK
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (!stats) {
-     return null; // Don't show if there are no games in DB
+     return null;
   }
 
   const formatNumber = (num: number) => {
@@ -84,7 +145,6 @@ export function LichessStats({ fen }: { fen: string }) {
   const dPct = (stats.draws / stats.total) * 100;
   const bPct = (stats.black / stats.total) * 100;
 
-  // Filter top moves (max 3)
   const topMoves = stats.moves.slice(0, 3);
 
   return (
@@ -92,12 +152,11 @@ export function LichessStats({ fen }: { fen: string }) {
       <div className="flex justify-between items-baseline mb-2 border-b-2 border-dashed border-black/10 pb-1">
         <span className="text-[10px] uppercase font-black tracking-widest text-[#3B82F6] flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#3B82F6] animate-pulse"></span>
-          Base Lichess (Probabilités Humaines)
+          Base Lichess
         </span>
         <span className="text-[10px] uppercase tracking-widest font-bold text-gray-500">{formatNumber(stats.total)} parties</span>
       </div>
       
-      {/* Global Win/Loss logic */}
       <div className="h-6 w-full rounded-full border-2 border-black flex overflow-hidden font-bold text-[10px] sm:text-xs shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] relative mb-1">
         {wPct > 0 && (
           <div title={`Blancs: ${Math.round(wPct)}%`} className="bg-white flex items-center justify-center text-black" style={{ width: `${wPct}%`, borderRight: dPct > 0 || bPct > 0 ? '2px solid black' : 'none' }}>
@@ -121,7 +180,6 @@ export function LichessStats({ fen }: { fen: string }) {
         <span className="text-[9px] font-bold text-gray-400">Noirs</span>
       </div>
 
-      {/* Probability moves */}
       {topMoves.length > 0 && (
         <div className="space-y-1.5">
           <div className="text-[9px] uppercase font-bold tracking-widest text-gray-500 mb-1 border-b-[1px] border-black/10 pb-1">Les choix fréquents :</div>
@@ -139,6 +197,19 @@ export function LichessStats({ fen }: { fen: string }) {
           })}
         </div>
       )}
+      
+      {token && (
+        <button 
+          onClick={() => {
+            localStorage.removeItem('lichess_token');
+            setToken('');
+          }}
+          className="mt-3 text-[8px] text-gray-400 hover:text-red-500 uppercase font-bold tracking-tighter"
+        >
+          Effacer mon jeton Lichess
+        </button>
+      )}
     </div>
   );
 }
+
