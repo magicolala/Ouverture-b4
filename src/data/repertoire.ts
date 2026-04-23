@@ -1,11 +1,11 @@
 import { Chess } from "chess.js";
 
 export const C = {
-  B4: "<em>Ouverture Sokolsky (1.b4).</em> Coup surprise qui gagne de l’espace à l’aile dame. <strong>Idée :</strong> fianchetto en <strong>Fb2</strong> pour dominer la diagonale <strong>a1–h8</strong> et cibler <strong>e5</strong>. <strong>Plan :</strong> développement rapide + pression plutôt que “s’accrocher” au pion b4.",
+  B4: "<em>Ouverture Sokolsky (1.b4).</em> Aussi appelée <strong>Ouverture Polonaise</strong> ou <strong>Orang-outan</strong> (Code A00). Jouée par des légendes comme Tartakower et Magnus Carlsen, c'est un coup surprenant qui vise à lutter pour un <strong>avantage spatial à l'aile dame</strong> plutôt que de contrôler immédiatement le centre.<br><strong>Plan principal :</strong> fianchetto en <strong>Fb2</strong> pour dominer la puissante diagonale <strong>a1–h8</strong>. On réclame ensuite sa part du centre via une poussée de pions ou en échangeant le pion b contre le pion c adverse pour obtenir une force centrale.<br><strong>Idées clés :</strong> Une poussée rapide <strong>b4-b5</strong> peut déloger un cavalier en c6 ou esquiver une attaque (offrant un net avantage d'espace, même si le pion b5 peut devenir surextendu). On préfère un développement fluide et maintenir la pression plutôt que de s'accrocher à tout prix au pion b4.",
 
-  E5: "La réponse la plus directe : Noir prend le centre et <strong>met immédiatement b4 sous pression</strong>. On accepte souvent de “sacrifier” du temps à Noir s’il veut capturer b4 : notre compensation, c’est <strong>activité</strong>, développement fluide et pression sur <strong>e5</strong> via la diagonale a1–h8.",
+  E5: "<em>1...e5 — la réponse la plus fréquente.</em> Noir prend directement le centre, obtenant une part d'espace central légèrement supérieure à celle des ouvertures classiques. Ce coup libère également le fou f8 qui <strong>met immédiatement le pion b4 sous pression</strong>.<br>Face à cela, <strong>2.a3</strong> et <strong>2.Fb2</strong> sont toutes deux de bonnes réponses. En jouant 2.Fb2, on accepte souvent de \"sacrifier\" le pion b4 : notre compensation est une grande <strong>activité</strong>, un développement fluide et une forte pression sur <strong>e5</strong> via la diagonale a1–h8.",
 
-  BB2: "<em>Coup pivot.</em> Le fou s’installe sur la grande diagonale et vise <strong>e5</strong>. <strong>Motif récurrent :</strong> si Noir capture b4 trop tôt, il se retrouve souvent en <strong>surcharge</strong> sur e5 (défense insuffisante / pièces mal coordonnées).",
+  BB2: "<em>2.Fb2 — Coup pivot et fianchetto immédiat.</em> Le fou s’installe sur la grande diagonale et attaque <strong>e5</strong> (et l'aile roi), tout en laissant le pion b4 sans protection. L'idée est que le pion central noir a plus de valeur que notre pion de flanc. C'est une position relativement peu explorée.<br><strong>Réponses noires typiques :</strong><br>• <strong>2...Fxb4</strong> force pratiquement 3.Fxe5 (position incertaine, léger avantage Blanc selon les machines).<br>• <strong>2...d6</strong> défend e5 mais annule la pression sur b4.<br>• <strong>2...d5</strong> prend le centre, mais gare au piège après 3.Fxe5 Fxb4?? 4.Fxg7! (Blanc gagne la tour).<br>• <strong>2...Cc6?</strong> est une erreur : sur 3.b5!, le cavalier doit fuir et Blanc gagne le pion avec 4.Fxe5.",
 
   D6: "Défense solide de <strong>e5</strong> (structure <strong>type Philidor</strong>). En échange, Noir limite un peu son jeu : le fou f8 manque d’air. Profite du tempo pour jouer <strong>c4</strong>, finir ton développement et préparer une poussée centrale (<strong>d4</strong>) au bon moment.",
 
@@ -36,6 +36,11 @@ export const C = {
   CONTRE_C5: "Contre-attaque immédiate : Noir veut casser ton espace en attaquant le socle <strong>b4</strong> et ouvrir des lignes. Il faut réagir de façon énergique (souvent en capturant) pour ne pas se faire liquider “gratuitement”.",
 
   CONTRE_C5_D4: "<em>🎯 Coup de rupture.</em> <strong>d4</strong> ouvre le centre <strong>et</strong> attaque le fou (souvent en c5). Très bon quand tu es mieux développé : tu gagnes de l’espace, des tempos, et tu transformes l’ouverture en initiative.",
+
+  BXB4_IMMEDIATE: "<em>2…Fxb4 — prise immédiate du pion b.</em> Noir capture le pion non défendu, ce qui aboutit le plus souvent à <strong>3.Fxe5</strong>. Non seulement Noir a cédé à Blanc une <strong>majorité de pions au centre</strong> (pion b contre pion e), mais Blanc menace aussi <strong>g7</strong> sur la diagonale ouverte.<br><strong>Alternative tranchante :</strong> 3.f4?! est risqué mais jouable. Noir peut refuser avec 3…d6 (avantage noir, aile roi blanche affaiblie), accepter avec 3…exf4?! (jeu sauvage, léger avantage Blanc selon les machines après 4.Fxg7 Dh4+ 5.g3 fxg3 6.Fg2! gxh2+ 7.Rf1 hxg1=D+ 8.Rxg1 Dg3 9.Fxh8), ou jouer <strong>3…Ch6!</strong> qui donne un gros avantage à Noir d’après les machines.",
+
+  BXE5_RECAPTURE: "<em>3.Fxe5 — la réponse naturelle.</em> Blanc récupère un pion <strong>central</strong> en échange du pion b4. Résultat : Blanc a une <strong>majorité de pions au centre</strong> et le fou reste actif sur la grande diagonale, visant <strong>g7</strong>. Noir doit faire attention à cette pression.",
+
 
   D5: "Réponse classique et solide : Noir occupe le centre sans attaquer b4 tout de suite. Ton plan est très stable : <strong>Fb2</strong>, <strong>e3</strong>, <strong>a3</strong> (souvent indispensable), puis <strong>c4</strong> pour mettre <strong>d5</strong> sous pression.",
 
@@ -274,6 +279,22 @@ export const REPERTOIRE: RepertoireLine[] = [
   },
 
   // --- 1.3 Variantes secondaires (sidelines) ---
+  {
+    name: "2...Fxb4 : prise immédiate (Bxe5)",
+    category: "Contre 1...e5",
+    chapter: "e5",
+    subchapter: "sidelines",
+    priority: "important",
+    description: "Noir prend le pion b4 immédiatement. On récupère avec Fxe5 et on obtient une majorité centrale + menace sur g7.",
+    moves: [
+      { san: "b4", comment: C.B4 },
+      { san: "e5", comment: C.E5 },
+      { san: "Bb2", comment: C.BB2 },
+      { san: "Bxb4", comment: C.BXB4_IMMEDIATE, circles: [{"square":"e5","color":"red"},{"square":"g7","color":"yellow"}] },
+      { san: "Bxe5", comment: C.BXE5_RECAPTURE, circles: [{"square":"e5","color":"green"},{"square":"g7","color":"red"}] },
+    ]
+  },
+
   {
     name: "2...Cc6 : chasser avec b5",
     category: "Contre 1...e5",
