@@ -4,38 +4,55 @@
 @theme {
   --font-heading: "Outfit", sans-serif;
   --font-body: "Inter", sans-serif;
+  
+  --color-wero-yellow: #FFEF00;
+  --color-wero-cyan: #00F0FF;
+  --color-wero-salmon: #FF7A5C;
+  --color-wero-purple: #7B61FF;
+  --color-wero-bg: #F9FAFB;
 }
 
 body {
   font-family: var(--font-body);
-  background-color: #fdfaf6;
-  color: #111827;
+  background-color: var(--color-wero-bg);
+  color: #000000;
   -webkit-font-smoothing: antialiased;
 }
 
-/* Rick utility classes */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+button, a, input[type="button"], input[type="submit"] {
+  cursor: pointer;
+}
+
 @layer utilities {
-  .rick-brutal {
-    @apply border-[3px] border-black shadow-[6px_6px_0_0_#111];
+  .wero-card {
+    @apply border-[3px] border-black bg-white rounded-[2rem] shadow-[8px_8px_0_0_#000] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-[4px_4px_0_0_#000];
+  }
+  
+  .wero-button {
+    @apply px-6 py-3 border-[3px] border-black rounded-full font-black uppercase tracking-wider shadow-[4px_4px_0_0_#000] transition-all hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0_0_#000] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0_0_#000];
+  }
+
+  .wero-input {
+    @apply px-4 py-3 border-[3px] border-black rounded-2xl focus:ring-0 focus:outline-none bg-white font-bold;
   }
 }
 
-/* Custom Scrollbar for brutalism style */
+/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
 }
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
-  border-left: 2px dashed rgba(0,0,0,0.1);
 }
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #3B82F6;
-  border: 2px solid black;
-  border-radius: 4px;
+  background: black;
+  border: 3px solid var(--color-wero-bg);
+  border-radius: 10px;
 }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #2563EB;
-}
+
 
 

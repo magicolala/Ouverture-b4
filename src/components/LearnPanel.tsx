@@ -15,7 +15,6 @@ interface LearnPanelProps {
 }
 
 function moveNumberLabel(moveIndex: number): string {
-  // moveIndex 0 → "1.b", 1 → "1...n", 2 → "2.b", etc.
   const fullMove = Math.floor(moveIndex / 2) + 1;
   const isWhite = moveIndex % 2 === 0;
   return isWhite ? `${fullMove}.` : `${fullMove}…`;
@@ -35,92 +34,100 @@ export function LearnPanel({
   const progressPct = Math.round((currentMoveIndex / totalMoves) * 100);
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_#111]">
-      <header className="flex items-center justify-between gap-2">
+    <div className="wero-card p-0 overflow-hidden flex flex-col bg-white">
+      <header className="p-6 bg-black text-white flex items-center justify-between gap-4">
         <div>
-          <div className="text-xs uppercase tracking-wider text-gray-500">
+          <div className="text-[10px] font-black uppercase tracking-widest text-wero-yellow mb-1">
             Mode Apprendre
           </div>
-          <h2 className="text-lg font-bold">{line.name}</h2>
+          <h2 className="text-xl font-black uppercase tracking-tight leading-none">{line.name}</h2>
         </div>
         <button
           onClick={onExit}
-          className="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
+          className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-2 border-white/20 hover:bg-white/10 transition"
         >
           ← Menu
         </button>
       </header>
 
-      {line.description && (
-        <p className="text-sm text-gray-600 italic">{line.description}</p>
-      )}
+      <div className="p-6 flex flex-col gap-6">
+        {line.description && (
+          <p className="text-sm font-bold text-gray-500 italic">{line.description}</p>
+        )}
 
-      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-green-500 transition-all"
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
-      <div className="text-xs text-gray-500 text-right">
-        {currentMoveIndex} / {totalMoves} coups
-      </div>
-
-      {!isLineComplete && expectedMove && (
-        <div className="flex flex-col gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-baseline gap-2">
-            <span className="text-xs text-gray-500">
-              Coup suivant
-            </span>
-            <span className="font-mono text-xl font-bold">
-              {moveNumberLabel(currentMoveIndex)} {expectedMove.san}
-            </span>
-          </div>
-          {expectedMove.comment && (
+        <div className="flex flex-col gap-2">
+          <div className="h-4 w-full bg-gray-100 rounded-full border-[2.5px] border-black overflow-hidden shadow-[2px_2px_0_0_#000]">
             <div
-              className="text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: expectedMove.comment }}
+              className="h-full bg-wero-cyan transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
             />
-          )}
-        </div>
-      )}
-
-      {!isLineComplete && (
-        <button
-          onClick={onAdvance}
-          className="w-full py-3 rounded-lg bg-black text-white font-bold hover:bg-gray-800 transition"
-        >
-          Coup suivant →
-        </button>
-      )}
-
-      {isLineComplete && (
-        <div className="flex flex-col gap-3 p-4 bg-green-50 border-2 border-green-500 rounded-lg">
-          <div className="text-lg font-bold text-green-800">
-            Variante parcourue ✓
           </div>
-          <p className="text-sm text-green-700">
-            Tu viens de voir toute la ligne. On passe en mode entraînement sur
-            la MÊME variante pour la fixer en mémoire.
-          </p>
-
-          <LichessStats fen={fen} />
-
-          <a
-            href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg bg-[#2b2b2b] text-white font-bold text-sm hover:bg-[#1a1a1a] transition shadow"
-          >
-            <span>♞ Explorer la suite sur Lichess</span>
-          </a>
-          <button
-            onClick={onFinishLine}
-            className="w-full py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition"
-          >
-            Variante terminée ✓ — Entraîner
-          </button>
+          <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 text-right">
+            Progression : {currentMoveIndex} / {totalMoves} coups ({progressPct}%)
+          </div>
         </div>
-      )}
+
+        {!isLineComplete && expectedMove && (
+          <div className="wero-card bg-gray-50 p-6 border-[2px] shadow-[4px_4px_0_0_#000]">
+            <div className="flex items-baseline gap-3 mb-4">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Coup suivant
+              </span>
+              <span className="text-3xl font-black italic tracking-tighter text-wero-purple">
+                {moveNumberLabel(currentMoveIndex)} {expectedMove.san}
+              </span>
+            </div>
+            {expectedMove.comment && (
+              <div
+                className="text-sm font-bold leading-relaxed text-gray-800 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: expectedMove.comment }}
+              />
+            )}
+          </div>
+        )}
+
+        {!isLineComplete && (
+          <button
+            onClick={onAdvance}
+            className="wero-button bg-wero-yellow text-black w-full"
+          >
+            Coup suivant →
+          </button>
+        )}
+
+        {isLineComplete && (
+          <div className="flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
+            <div className="wero-card bg-green-50 border-green-500 p-6 shadow-[4px_4px_0_0_#15803d]">
+              <div className="text-2xl font-black uppercase tracking-tight text-green-800 mb-2">
+                Variante apprise ✓
+              </div>
+              <p className="text-sm font-bold text-green-700 leading-tight">
+                Excellent ! Vous avez parcouru toute la ligne. Prêt pour l'entraînement ?
+              </p>
+            </div>
+
+            <LichessStats fen={fen} />
+
+            <div className="flex flex-col gap-3">
+              <a
+                href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="wero-button bg-black text-white text-center flex items-center justify-center gap-2"
+              >
+                <span>♞ Explorer sur Lichess</span>
+              </a>
+              <button
+                onClick={onFinishLine}
+                className="wero-button bg-green-500 text-white"
+              >
+                Passer à l'entraînement ✓
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+

@@ -9,9 +9,7 @@ import { progressStore } from "../engine/progressStore";
 import type { SessionMode } from "../engine/types";
 
 interface RepertoireMenuProps {
-  /** Démarre une session avec une file de lignes. */
   onStart: (queue: RepertoireLine[], mode: SessionMode) => void;
-  /** Lance l'explorateur en mode libre */
   onExplore?: () => void;
 }
 
@@ -20,21 +18,20 @@ const PRIORITY_BADGE: Record<
   { label: string; cls: string }
 > = {
   "must-know": {
-    label: "Essentiel",
-    cls: "bg-red-100 text-red-800 border-red-300",
+    label: "ESSENTIEL",
+    cls: "bg-wero-salmon text-white border-black",
   },
   important: {
-    label: "Important",
-    cls: "bg-orange-100 text-orange-800 border-orange-300",
+    label: "IMPORTANT",
+    cls: "bg-wero-yellow text-black border-black",
   },
   bonus: {
-    label: "Bonus",
-    cls: "bg-blue-100 text-blue-800 border-blue-300",
+    label: "BONUS",
+    cls: "bg-wero-cyan text-black border-black",
   },
 };
 
 export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
-  // Lu une fois au montage : suffisant tant qu'on ne reste pas sur l'écran pendant une session.
   const progress = useMemo(() => progressStore.getAll(), []);
   const [openChapters, setOpenChapters] = useState<Record<string, boolean>>(
     () => Object.fromEntries(CHAPTERS.map((c) => [c.id, c.order === 1])),
@@ -49,145 +46,145 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
   };
 
   return (
-    <div className="flex flex-col gap-5 max-w-3xl mx-auto p-4">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold">Répertoire 1.b4 — Sokolsky</h1>
-        <p className="text-sm text-gray-600">
-          Apprends chaque variante dans l'ordre, puis entraîne-toi pour la
-          mémoriser.
-        </p>
-      </header>
-
-      <button
-        onClick={handleMustKnow}
-        className="w-full py-4 px-4 rounded-xl bg-red-600 text-white font-bold text-lg shadow-[4px_4px_0_0_#111] border-2 border-black hover:bg-red-700 transition"
-      >
-        🎯 Réviser l'essentiel
-        <span className="block text-xs font-normal mt-1 opacity-90">
-          Entraînement sur toutes les lignes must-know
-        </span>
-      </button>
-
-      {onExplore && (
+    <div className="flex flex-col gap-8 max-w-4xl mx-auto">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <button
-          onClick={onExplore}
-          className="w-full py-4 px-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-[4px_4px_0_0_#111] border-2 border-black hover:bg-blue-700 transition"
+          onClick={handleMustKnow}
+          className="wero-card p-8 bg-wero-salmon group flex flex-col items-start text-left"
         >
-          🔍 Explorer le répertoire librement
-          <span className="block text-xs font-normal mt-1 opacity-90">
-            Parcourez librement toutes les positions et lisez le cours associé
-          </span>
+          <div className="w-12 h-12 bg-white rounded-full border-[3px] border-black flex items-center justify-center text-2xl mb-4 shadow-[3px_3px_0_0_#000]">
+            🎯
+          </div>
+          <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Réviser l'essentiel</h2>
+          <p className="font-bold opacity-70 text-sm leading-tight">
+            Entraînement concentré sur toutes les lignes "must-know".
+          </p>
         </button>
-      )}
 
-      {CHAPTERS.map((chapter) => {
-        const isOpen = openChapters[chapter.id];
-        return (
-          <section
-            key={chapter.id}
-            className="border-2 border-black rounded-xl bg-white shadow-[4px_4px_0_0_#111] overflow-hidden"
+        {onExplore && (
+          <button
+            onClick={onExplore}
+            className="wero-card p-8 bg-wero-cyan group flex flex-col items-start text-left"
           >
-            <button
-              onClick={() => toggleChapter(chapter.id)}
-              className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50"
+            <div className="w-12 h-12 bg-white rounded-full border-[3px] border-black flex items-center justify-center text-2xl mb-4 shadow-[3px_3px_0_0_#000]">
+              🔍
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Explorer Librement</h2>
+            <p className="font-bold opacity-70 text-sm leading-tight">
+              Parcourez toutes les positions et lisez le cours associé.
+            </p>
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-6">
+        {CHAPTERS.map((chapter) => {
+          const isOpen = openChapters[chapter.id];
+          return (
+            <section
+              key={chapter.id}
+              className="wero-card overflow-hidden border-black border-[3px] bg-white"
             >
-              <div>
-                <h2 className="text-lg font-bold">{chapter.title}</h2>
-                <p className="text-xs text-gray-500 mt-1">
-                  {chapter.description}
-                </p>
-              </div>
-              <span className="text-xl ml-3">{isOpen ? "▾" : "▸"}</span>
-            </button>
+              <button
+                onClick={() => toggleChapter(chapter.id)}
+                className={`w-full flex items-center justify-between p-6 text-left transition-colors ${isOpen ? 'bg-wero-yellow' : 'hover:bg-gray-50'}`}
+              >
+                <div>
+                  <h2 className="text-xl font-black uppercase tracking-tight">{chapter.title}</h2>
+                  <p className="text-sm font-bold text-gray-500 mt-1">
+                    {chapter.description}
+                  </p>
+                </div>
+                <span className={`text-2xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
 
-            {isOpen && (
-              <div className="border-t-2 border-black">
-                {chapter.subchapters.map((sub) => {
-                  const lines = getLinesBySubchapter(chapter.id, sub.id);
-                  if (lines.length === 0) return null;
-                  return (
-                    <div
-                      key={sub.id}
-                      className="p-4 border-b border-gray-200 last:border-b-0"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <h3 className="font-semibold">{sub.title}</h3>
-                          <p className="text-xs text-gray-500">
-                            {sub.description}
-                          </p>
+              {isOpen && (
+                <div className="bg-white border-t-[3px] border-black">
+                  {chapter.subchapters.map((sub) => {
+                    const lines = getLinesBySubchapter(chapter.id, sub.id);
+                    if (lines.length === 0) return null;
+                    return (
+                      <div
+                        key={sub.id}
+                        className="p-6 border-b-[3px] border-black last:border-b-0"
+                      >
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                          <div>
+                            <h3 className="text-lg font-black uppercase tracking-tight text-wero-purple">{sub.title}</h3>
+                            <p className="text-sm font-bold text-gray-400">
+                              {sub.description}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => onStart(lines, "practice")}
+                            className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-gray-100 hover:bg-black hover:text-white transition shadow-[3px_3px_0_0_#000]"
+                          >
+                            Entraîner tout ({lines.length})
+                          </button>
                         </div>
-                        <button
-                          onClick={() => onStart(lines, "practice")}
-                          className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-100"
-                          title="Entraîner tout le sous-chapitre"
-                        >
-                          Entraîner tout ({lines.length})
-                        </button>
-                      </div>
 
-                      <ul className="flex flex-col gap-1.5">
-                        {lines.map((line) => {
-                          const p = progress[line.name];
-                          const badge = PRIORITY_BADGE[line.priority];
-                          return (
-                            <li
-                              key={line.name}
-                              className="flex items-center gap-2 p-2 rounded border border-gray-200 hover:border-gray-400"
-                            >
-                              <span
-                                className={
-                                  "text-[10px] font-bold px-1.5 py-0.5 rounded border " +
-                                  badge.cls
-                                }
+                        <ul className="grid grid-cols-1 gap-3">
+                          {lines.map((line) => {
+                            const p = progress[line.name];
+                            const badge = PRIORITY_BADGE[line.priority];
+                            return (
+                              <li
+                                key={line.name}
+                                className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border-[2px] border-black bg-gray-50 hover:bg-white transition-all shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[-1px] hover:translate-y-[-1px]"
                               >
-                                {badge.label}
-                              </span>
-                              <span className="flex-1 text-sm">
-                                {line.name}
-                              </span>
-                              <div className="flex items-center gap-1 text-xs">
-                                {p?.learned && (
+                                <div className="flex items-center gap-3 flex-1">
                                   <span
-                                    className="text-green-600"
-                                    title="Parcourue en mode Apprendre"
+                                    className={`text-[8px] font-black px-2 py-1 rounded border-[1.5px] tracking-widest ${badge.cls}`}
                                   >
-                                    ✓
+                                    {badge.label}
                                   </span>
-                                )}
-                                {p && p.bestScore >= 80 && (
-                                  <span
-                                    className="text-yellow-500"
-                                    title={`Meilleur score : ${p.bestScore}%`}
+                                  <span className="font-bold text-sm">
+                                    {line.name}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    {p?.learned && (
+                                      <span className="w-5 h-5 bg-green-500 rounded-full border-[1.5px] border-black flex items-center justify-center text-[10px] text-white font-black" title="Parcourue">
+                                        ✓
+                                      </span>
+                                    )}
+                                    {p && p.bestScore >= 80 && (
+                                      <span className="w-5 h-5 bg-wero-yellow rounded-full border-[1.5px] border-black flex items-center justify-center text-[10px] text-black font-black" title={`Score: ${p.bestScore}%`}>
+                                        ★
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    onClick={() => onStart([line], "learn")}
+                                    className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-white hover:bg-wero-yellow transition"
                                   >
-                                    ★
-                                  </span>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => onStart([line], "learn")}
-                                className="text-xs px-2 py-1 rounded bg-black text-white hover:bg-gray-800"
-                              >
-                                Apprendre
-                              </button>
-                              <button
-                                onClick={() => onStart([line], "practice")}
-                                className="text-xs px-2 py-1 rounded border border-gray-400 hover:bg-gray-100"
-                              >
-                                Entraîner
-                              </button>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
-        );
-      })}
+                                    Apprendre
+                                  </button>
+                                  <button
+                                    onClick={() => onStart([line], "practice")}
+                                    className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-black text-white hover:bg-gray-800 transition"
+                                  >
+                                    Entraîner
+                                  </button>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
+

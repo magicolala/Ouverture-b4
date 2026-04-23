@@ -137,97 +137,100 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 flex flex-col lg:flex-row gap-6">
-      <div className="flex-1 min-w-0">
-        <ChessboardPanel
-          fen={fen}
-          arrows={arrowsToShow}
-          circles={circlesToShow}
-          lastMove={lastMove}
-          orientation="white"
-          disabled={
-            state.phase === "waiting-opponent" ||
-            state.phase === "line-complete" ||
-            state.phase === "session-complete" ||
-            state.showSolution
-          }
-          onMove={handleMove}
-        />
-        <div className="mt-2 flex items-center justify-center gap-3 text-xs text-gray-500">
-          <span>
-            Ligne {state.currentLineIndex + 1} / {state.queue.length}
-          </span>
-          <button
-            type="button"
-            onClick={() => setShowThreats((v) => !v)}
-            aria-pressed={showThreats}
-            title="Affiche en rouge les pièces du camp au trait qui peuvent être capturées avec gain matériel (raccourci : X)"
-            className={
-              "px-2 py-1 rounded-md border text-xs font-medium transition " +
-              (showThreats
-                ? "bg-red-600 text-white border-red-700 hover:bg-red-700"
-                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
-            }
-          >
-            {showThreats ? "⚠ Menaces ON" : "⚠ Afficher les menaces"}
-          </button>
+    <div className="min-h-screen bg-wero-bg p-6">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+        {/* Board Column */}
+        <div className="flex-1 flex flex-col items-center">
+          <div className="wero-card p-4 bg-white border-[4px]">
+            <ChessboardPanel
+              fen={fen}
+              arrows={arrowsToShow}
+              circles={circlesToShow}
+              lastMove={lastMove}
+              orientation="white"
+              disabled={
+                state.phase === "waiting-opponent" ||
+                state.phase === "line-complete" ||
+                state.phase === "session-complete" ||
+                state.showSolution
+              }
+              onMove={handleMove}
+            />
+          </div>
+          
+          <div className="mt-8 flex flex-col items-center gap-4">
+            <div className="flex items-center gap-4 bg-black text-white px-4 py-2 rounded-full border-[3px] border-black shadow-[4px_4px_0_0_#ccc]">
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Ligne</span>
+              <span className="text-sm font-black italic">{state.currentLineIndex + 1} / {state.queue.length}</span>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => setShowThreats((v) => !v)}
+              className={`wero-button text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
+            >
+              {showThreats ? "⚠ Threats ON" : "⚠ Show Threats"}
+            </button>
+          </div>
         </div>
+
+        {/* Action Sidebar */}
+        <aside className="w-full lg:w-[460px] flex flex-col gap-6">
+          {showSessionCompleteScreen && (
+            <SessionComplete
+              mode={state.mode}
+              line={currentLine}
+              stats={state.stats}
+              hasNextLine={false}
+              onNextLine={() => {}}
+              onRestart={session.restartLine}
+              onExit={onExit}
+            />
+          )}
+
+          {!showSessionCompleteScreen && showCompleteScreen && (
+            <SessionComplete
+              mode={state.mode}
+              line={currentLine}
+              stats={state.stats}
+              hasNextLine={hasNextLineInQueue}
+              onNextLine={session.nextLine}
+              onRestart={session.restartLine}
+              onExit={onExit}
+            />
+          )}
+
+          {!showCompleteScreen && !showSessionCompleteScreen && state.mode === "learn" && (
+            <LearnPanel
+              line={currentLine}
+              currentMoveIndex={state.currentMoveIndex}
+              fen={fen}
+              expectedMove={expectedMove}
+              isLineComplete={state.phase === "line-complete"}
+              onAdvance={session.advanceLearn}
+              onFinishLine={session.finishLearnLine}
+              onExit={onExit}
+            />
+          )}
+
+          {!showCompleteScreen && !showSessionCompleteScreen && state.mode === "practice" && (
+            <PracticePanel
+              line={currentLine}
+              currentMoveIndex={state.currentMoveIndex}
+              expectedMove={expectedMove}
+              attemptsOnCurrentMove={state.attemptsOnCurrentMove}
+              showSolution={state.showSolution}
+              lastError={state.lastError}
+              isUserTurn={session.isUserTurn}
+              isWaitingOpponent={state.phase === "waiting-opponent"}
+              onContinueAfterSolution={session.continueAfterSolution}
+              onRestart={session.restartLine}
+              onExit={onExit}
+            />
+          )}
+        </aside>
       </div>
-
-      <aside className="w-full lg:w-[380px] flex flex-col gap-4">
-        {showSessionCompleteScreen && (
-          <SessionComplete
-            mode={state.mode}
-            line={currentLine}
-            stats={state.stats}
-            hasNextLine={false}
-            onNextLine={() => {}}
-            onRestart={session.restartLine}
-            onExit={onExit}
-          />
-        )}
-
-        {!showSessionCompleteScreen && showCompleteScreen && (
-          <SessionComplete
-            mode={state.mode}
-            line={currentLine}
-            stats={state.stats}
-            hasNextLine={hasNextLineInQueue}
-            onNextLine={session.nextLine}
-            onRestart={session.restartLine}
-            onExit={onExit}
-          />
-        )}
-
-        {!showCompleteScreen && !showSessionCompleteScreen && state.mode === "learn" && (
-          <LearnPanel
-            line={currentLine}
-            currentMoveIndex={state.currentMoveIndex}
-            fen={fen}
-            expectedMove={expectedMove}
-            isLineComplete={state.phase === "line-complete"}
-            onAdvance={session.advanceLearn}
-            onFinishLine={session.finishLearnLine}
-            onExit={onExit}
-          />
-        )}
-
-        {!showCompleteScreen && !showSessionCompleteScreen && state.mode === "practice" && (
-          <PracticePanel
-            line={currentLine}
-            currentMoveIndex={state.currentMoveIndex}
-            expectedMove={expectedMove}
-            attemptsOnCurrentMove={state.attemptsOnCurrentMove}
-            showSolution={state.showSolution}
-            lastError={state.lastError}
-            isUserTurn={session.isUserTurn}
-            isWaitingOpponent={state.phase === "waiting-opponent"}
-            onContinueAfterSolution={session.continueAfterSolution}
-            onRestart={session.restartLine}
-            onExit={onExit}
-          />
-        )}
-      </aside>
     </div>
   );
 }
+
