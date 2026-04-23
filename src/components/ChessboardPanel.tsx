@@ -1,7 +1,8 @@
 import type { CSSProperties } from "react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import type { Arrow } from "react-chessboard";
+import { Chess } from "chess.js";
 import type { MoveAnnotation } from "../data/repertoire";
 
 interface ChessboardPanelProps {
@@ -53,6 +54,9 @@ export function ChessboardPanel({
   onMove,
   id = "repertoire-board",
 }: ChessboardPanelProps) {
+  // Case sélectionnée pour le mode "clic-clic".
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+
   // Conversion : MoveAnnotation.arrows ({from,to,color}) → Arrow ({startSquare,endSquare,color}).
   const boardArrows: Arrow[] = useMemo(() => {
     if (!arrows) return [];
@@ -67,6 +71,8 @@ export function ChessboardPanel({
   // Dernier coup : surligné en jaune translucide.
   const squareStyles = useMemo(() => {
     const styles: Record<string, CSSProperties> = {};
+    
+    // Surlignage du dernier coup
     if (lastMove) {
       const high: CSSProperties = {
         background: "rgba(234, 179, 8, 0.35)",
@@ -74,6 +80,16 @@ export function ChessboardPanel({
       styles[lastMove.from] = { ...styles[lastMove.from], ...high };
       styles[lastMove.to] = { ...styles[lastMove.to], ...high };
     }
+
+    // Surlignage de la case sélectionnée (clic-clic)
+    if (selectedSquare) {
+      styles[selectedSquare] = {
+        ...styles[selectedSquare],
+        background: "rgba(123, 97, 255, 0.5)", // wero-purple
+      };
+    }
+
+    // Cercles d'annotation
     if (circles) {
       for (const c of circles) {
         const color = resolveColor(c.color);
@@ -85,7 +101,7 @@ export function ChessboardPanel({
       }
     }
     return styles;
-  }, [circles, lastMove]);
+  }, [circles, lastMove, selectedSquare]);
 
   const handleDrop = ({
     sourceSquare,
@@ -97,8 +113,10 @@ export function ChessboardPanel({
     piece: { pieceType: string };
   }): boolean => {
     if (!targetSquare || disabled || !onMove) return false;
-    // Promotion : si un pion blanc arrive en 8, on force la dame par défaut.
-    // (Le répertoire Sokolsky n'a pas de promotion critique — on simplifie.)
+    
+    // Reset de la sélection clic-clic lors d'un drag
+    setSelectedSquare(null);
+
     const isWhitePawn = piece.pieceType === "wP";
     const isBlackPawn = piece.pieceType === "bP";
     const isPromotion =
@@ -109,6 +127,56 @@ export function ChessboardPanel({
       to: targetSquare,
       promotion: isPromotion ? "q" : undefined,
     });
+  };
+
+  const handleSquareClick = ({ square }: { square: string }) => {
+    if (disabled || !onMove) return;
+
+    const game = new Chess(fen);
+
+    // 1. Si aucune case n'est sélectionnée
+    if (!selectedSquare) {
+      const piece = game.get(square as any);
+      // On ne sélectionne que si c'est une pièce qui peut bouger (trait actuel)
+      if (piece && piece.color === game.turn()) {
+        setSelectedSquare(square);
+      }
+      return;
+    }
+
+    // 2. Si on clique sur la même case, on déselectionne
+    if (selectedSquare === square) {
+      setSelectedSquare(null);
+      return;
+    }
+
+    // 3. Si on clique sur une autre pièce de sa couleur, on change la sélection
+    const pieceAtTarget = game.get(square as any);
+    if (pieceAtTarget && pieceAtTarget.color === game.turn()) {
+      setSelectedSquare(square);
+      return;
+    }
+
+    // 4. On tente le coup
+    const pieceToMove = game.get(selectedSquare as any);
+    const isWhitePawn = pieceToMove?.type === "p" && pieceToMove?.color === "w";
+    const isBlackPawn = pieceToMove?.type === "p" && pieceToMove?.color === "b";
+    const isPromotion =
+      (isWhitePawn && square[1] === "8") ||
+      (isBlackPawn && square[1] === "1");
+
+    const success = onMove({
+      from: selectedSquare,
+      to: square,
+      promotion: isPromotion ? "q" : undefined,
+    });
+
+    if (success) {
+      setSelectedSquare(null);
+    } else {
+      // Si le coup échoue mais qu'on a cliqué sur une autre pièce valide (déjà géré en 3, mais au cas où)
+      setSelectedSquare(null);
+    }
   };
 
   return (
@@ -123,6 +191,7 @@ export function ChessboardPanel({
           arrows: boardArrows,
           squareStyles,
           onPieceDrop: handleDrop,
+          onSquareClick: handleSquareClick,
           animationDurationInMs: 200,
           showNotation: true,
         }}
