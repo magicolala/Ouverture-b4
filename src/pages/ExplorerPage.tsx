@@ -145,11 +145,11 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   };
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 sm:gap-8 items-center lg:items-start">
         {/* Board Column */}
         <div className="flex-1 flex flex-col items-center">
-          <div className="wero-card p-4 bg-white border-[4px]">
+          <div className="wero-card p-2 sm:p-4 bg-white border-[3px] sm:border-[4px] w-full max-w-[500px] lg:max-w-none">
             <ChessboardPanel
               fen={fen}
               lastMove={lastMove}
@@ -160,25 +160,25 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
             />
           </div>
           
-          <div className="mt-8 flex flex-wrap gap-4 justify-center">
+          <div className="mt-6 sm:mt-8 flex flex-row flex-wrap gap-2 sm:gap-4 justify-center">
             <button
               onClick={handleUndo}
               disabled={chess.history().length === 0}
-              className="wero-button bg-white text-xs disabled:opacity-50"
+              className="wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs bg-white disabled:opacity-50"
             >
               ⟲ Undo
             </button>
             <button
               onClick={handleReset}
               disabled={chess.history().length === 0}
-              className="wero-button bg-white text-xs disabled:opacity-50"
+              className="wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs bg-white disabled:opacity-50"
             >
               ↻ Reset
             </button>
             <button
               type="button"
               onClick={() => setShowThreats((v) => !v)}
-              className={`wero-button text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
+              className={`wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
             >
               {showThreats ? "⚠ Threats ON" : "⚠ Show Threats"}
             </button>
@@ -188,21 +188,21 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
         {/* Info Sidebar */}
         <aside className="w-full lg:w-[460px] flex flex-col gap-6">
           <div className="wero-card p-0 overflow-hidden flex flex-col bg-white">
-            <header className="p-6 bg-black text-white flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-wero-yellow rounded-xl border-2 border-white flex items-center justify-center font-black text-black text-xs shadow-[2px_2px_0_0_#fff]">
+            <header className="p-4 sm:p-6 bg-black text-white flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-wero-yellow rounded-lg sm:rounded-xl border-2 border-white flex items-center justify-center font-black text-black text-[10px] sm:text-xs shadow-[2px_2px_0_0_#fff]">
                   R
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-wero-cyan mb-0.5">
+                  <div className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest text-wero-cyan mb-0.5">
                     Rick Chess Coach
                   </div>
-                  <h2 className="text-xl font-black uppercase tracking-tight leading-none">Explorateur</h2>
+                  <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight leading-none">Explorateur</h2>
                 </div>
               </div>
               <button
                 onClick={onExit}
-                className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-2 border-white/20 hover:bg-white/10 transition"
+                className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-2 border-white/20 hover:bg-white/10 transition"
               >
                 ← Menu
               </button>

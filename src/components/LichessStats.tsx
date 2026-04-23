@@ -201,12 +201,12 @@ export function LichessStats({ fen }: { fen: string }) {
           {topMoves.map((m, i) => {
             const movePct = (m.total / stats.total) * 100;
             return (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className="font-mono font-bold w-12">{m.san}</span>
-                <div className="flex-1 bg-gray-100 h-3 rounded-full border border-black/20 overflow-hidden relative">
+              <div key={i} className="flex items-center gap-2 text-[10px] sm:text-xs">
+                <span className="font-mono font-bold w-10 sm:w-12 shrink-0">{m.san}</span>
+                <div className="flex-1 bg-gray-100 h-2.5 sm:h-3 rounded-full border border-black/20 overflow-hidden relative">
                    <div className="h-full bg-[#EAB308] transition-all" style={{ width: `${Math.max(2, movePct)}%` }}></div>
                 </div>
-                <span className="font-black text-[10px] w-9 text-right text-gray-600">{Math.round(movePct)}%</span>
+                <span className="font-black text-[9px] sm:text-[10px] w-8 sm:w-9 text-right text-gray-600 shrink-0">{Math.round(movePct)}%</span>
               </div>
             );
           })}

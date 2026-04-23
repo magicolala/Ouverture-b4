@@ -167,11 +167,11 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 sm:gap-8 items-center lg:items-start">
         {/* Board Column */}
         <div className="flex-1 flex flex-col items-center">
-          <div className="wero-card p-4 bg-white border-[4px]">
+          <div className="wero-card p-2 sm:p-4 bg-white border-[3px] sm:border-[4px] w-full max-w-[500px] lg:max-w-none">
             <ChessboardPanel
               fen={fen}
               arrows={arrowsToShow}
@@ -188,16 +188,16 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
             />
           </div>
           
-          <div className="mt-8 flex flex-col items-center gap-4">
-            <div className="flex items-center gap-4 bg-black text-white px-4 py-2 rounded-full border-[3px] border-black shadow-[4px_4px_0_0_#ccc]">
-              <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Ligne</span>
-              <span className="text-sm font-black italic">{state.currentLineIndex + 1} / {state.queue.length}</span>
+          <div className="mt-6 sm:mt-8 flex flex-row sm:flex-col items-center gap-3 sm:gap-4 w-full justify-center">
+            <div className="flex items-center gap-3 bg-black text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-[2px] sm:border-[3px] border-black shadow-[3px_3px_0_0_#ccc] sm:shadow-[4px_4px_0_0_#ccc]">
+              <span className="text-[8px] sm:text-[10px] font-black uppercase tracking-widest opacity-60">Ligne</span>
+              <span className="text-xs sm:text-sm font-black italic">{state.currentLineIndex + 1} / {state.queue.length}</span>
             </div>
             
             <button
               type="button"
               onClick={() => setShowThreats((v) => !v)}
-              className={`wero-button text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
+              className={`wero-button !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
             >
               {showThreats ? "⚠ Threats ON" : "⚠ Show Threats"}
             </button>

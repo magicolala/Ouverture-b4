@@ -51,13 +51,13 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <button
           onClick={handleMustKnow}
-          className="wero-card p-8 bg-wero-salmon group flex flex-col items-start text-left"
+          className="wero-card p-6 sm:p-8 bg-wero-salmon group flex flex-col items-start text-left"
         >
-          <div className="w-12 h-12 bg-white rounded-full border-[3px] border-black flex items-center justify-center text-2xl mb-4 shadow-[3px_3px_0_0_#000]">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center text-xl sm:text-2xl mb-4 shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]">
             🎯
           </div>
-          <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Réviser l'essentiel</h2>
-          <p className="font-bold opacity-70 text-sm leading-tight">
+          <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight mb-2">Réviser l'essentiel</h2>
+          <p className="font-bold opacity-70 text-[12px] sm:text-sm leading-tight">
             Entraînement concentré sur toutes les lignes "must-know".
           </p>
         </button>
@@ -65,13 +65,13 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
         {onExplore && (
           <button
             onClick={onExplore}
-            className="wero-card p-8 bg-wero-cyan group flex flex-col items-start text-left"
+            className="wero-card p-6 sm:p-8 bg-wero-cyan group flex flex-col items-start text-left"
           >
-            <div className="w-12 h-12 bg-white rounded-full border-[3px] border-black flex items-center justify-center text-2xl mb-4 shadow-[3px_3px_0_0_#000]">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center text-xl sm:text-2xl mb-4 shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]">
               🔍
             </div>
-            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Explorer Librement</h2>
-            <p className="font-bold opacity-70 text-sm leading-tight">
+            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight mb-2">Explorer Librement</h2>
+            <p className="font-bold opacity-70 text-[12px] sm:text-sm leading-tight">
               Parcourez toutes les positions et lisez le cours associé.
             </p>
           </button>
@@ -88,15 +88,15 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
             >
               <button
                 onClick={() => toggleChapter(chapter.id)}
-                className={`w-full flex items-center justify-between p-6 text-left transition-colors ${isOpen ? 'bg-wero-yellow' : 'hover:bg-gray-50'}`}
+                className={`w-full flex items-center justify-between p-4 sm:p-6 text-left transition-colors ${isOpen ? 'bg-wero-yellow' : 'hover:bg-gray-50'}`}
               >
                 <div>
-                  <h2 className="text-xl font-black uppercase tracking-tight">{chapter.title}</h2>
-                  <p className="text-sm font-bold text-gray-500 mt-1">
+                  <h2 className="text-lg sm:text-xl font-black uppercase tracking-tight">{chapter.title}</h2>
+                  <p className="text-[12px] sm:text-sm font-bold text-gray-500 mt-1">
                     {chapter.description}
                   </p>
                 </div>
-                <span className={`text-2xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
+                <span className={`text-xl sm:text-2xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
                   ▼
                 </span>
               </button>
@@ -111,16 +111,16 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
                         key={sub.id}
                         className="p-6 border-b-[3px] border-black last:border-b-0"
                       >
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4 sm:mb-6">
                           <div>
-                            <h3 className="text-lg font-black uppercase tracking-tight text-wero-purple">{sub.title}</h3>
-                            <p className="text-sm font-bold text-gray-400">
+                            <h3 className="text-base sm:text-lg font-black uppercase tracking-tight text-wero-purple">{sub.title}</h3>
+                            <p className="text-[11px] sm:text-sm font-bold text-gray-400">
                               {sub.description}
                             </p>
                           </div>
                           <button
                             onClick={() => onStart(lines, "practice")}
-                            className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-gray-100 hover:bg-black hover:text-white transition shadow-[3px_3px_0_0_#000]"
+                            className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-[1.5px] sm:border-[2px] border-black bg-gray-100 hover:bg-black hover:text-white transition shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]"
                           >
                             Entraîner tout ({lines.length})
                           </button>
@@ -135,38 +135,38 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
                                 key={line.name}
                                 className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl border-[2px] border-black bg-gray-50 hover:bg-white transition-all shadow-[2px_2px_0_0_#000] hover:shadow-[4px_4px_0_0_#000] hover:translate-x-[-1px] hover:translate-y-[-1px]"
                               >
-                                <div className="flex items-center gap-3 flex-1">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
                                   <span
-                                    className={`text-[8px] font-black px-2 py-1 rounded border-[1.5px] tracking-widest ${badge.cls}`}
+                                    className={`text-[7px] sm:text-[8px] font-black px-1.5 py-0.5 rounded border tracking-widest shrink-0 ${badge.cls}`}
                                   >
                                     {badge.label}
                                   </span>
-                                  <span className="font-bold text-sm">
+                                  <span className="font-bold text-[12px] sm:text-sm truncate">
                                     {line.name}
                                   </span>
-                                  <div className="flex items-center gap-1">
+                                  <div className="flex items-center gap-1 shrink-0">
                                     {p?.learned && (
-                                      <span className="w-5 h-5 bg-green-500 rounded-full border-[1.5px] border-black flex items-center justify-center text-[10px] text-white font-black" title="Parcourue">
+                                      <span className="w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full border border-black flex items-center justify-center text-[8px] sm:text-[10px] text-white font-black" title="Parcourue">
                                         ✓
                                       </span>
                                     )}
                                     {p && p.bestScore >= 80 && (
-                                      <span className="w-5 h-5 bg-wero-yellow rounded-full border-[1.5px] border-black flex items-center justify-center text-[10px] text-black font-black" title={`Score: ${p.bestScore}%`}>
+                                      <span className="w-4 h-4 sm:w-5 sm:h-5 bg-wero-yellow rounded-full border border-black flex items-center justify-center text-[8px] sm:text-[10px] text-black font-black" title={`Score: ${p.bestScore}%`}>
                                         ★
                                       </span>
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 shrink-0">
                                   <button
                                     onClick={() => onStart([line], "learn")}
-                                    className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-white hover:bg-wero-yellow transition"
+                                    className="flex-1 sm:flex-none text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-[1.5px] sm:border-[2px] border-black bg-white hover:bg-wero-yellow transition"
                                   >
                                     Apprendre
                                   </button>
                                   <button
                                     onClick={() => onStart([line], "practice")}
-                                    className="flex-1 sm:flex-none text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-[2px] border-black bg-black text-white hover:bg-gray-800 transition"
+                                    className="flex-1 sm:flex-none text-[9px] sm:text-[10px] font-black uppercase tracking-widest px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border-[1.5px] sm:border-[2px] border-black bg-black text-white hover:bg-gray-800 transition"
                                   >
                                     Entraîner
                                   </button>

@@ -25,17 +25,17 @@ export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
       </div>
 
       {/* Hero Section */}
-      <section className="pt-20 pb-12 px-6 text-center max-w-4xl mx-auto flex-1">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-wero-cyan border-[3px] border-black font-black text-[10px] uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000]">
+      <section className="pt-12 sm:pt-20 pb-8 sm:pb-12 px-4 sm:px-6 text-center max-w-4xl mx-auto flex-1">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-wero-cyan border-[3px] border-black font-black text-[9px] sm:text-[10px] uppercase tracking-widest mb-4 sm:mb-6 shadow-[3px_3px_0_0_#000]">
           <span>Sokolsky Repertoire v4</span>
           <span className="opacity-40">|</span>
           <span className="text-white">By Rick Wallas</span>
         </div>
-        <h1 className="text-6xl md:text-8xl font-[900] leading-[0.9] tracking-tighter mb-8 italic">
+        <h1 className="text-4xl sm:text-6xl md:text-8xl font-[900] leading-[0.9] tracking-tighter mb-6 sm:mb-8 italic">
           MAÎTRISEZ <br />
           <span className="text-wero-purple">L'OUVERTURE 1.b4</span>
         </h1>
-        <p className="text-lg md:text-xl font-bold text-gray-600 max-w-xl mx-auto leading-relaxed mb-10">
+        <p className="text-base sm:text-lg md:text-xl font-bold text-gray-600 max-w-xl mx-auto leading-relaxed mb-8 sm:mb-10 px-4 sm:px-0">
           Entraînez-vous sur le système complet construit par <strong>Rick Wallas</strong> pour dominer avec l'Orang-outan.
         </p>
 
