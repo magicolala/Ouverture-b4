@@ -3,6 +3,7 @@ import type { RepertoireLine, MoveAnnotation } from "../data/repertoire";
 interface LearnPanelProps {
   line: RepertoireLine;
   currentMoveIndex: number;
+  fen: string;
   /** Le coup à présenter ensuite (null si ligne terminée). */
   expectedMove: MoveAnnotation | null;
   /** True si la variante est terminée (currentMoveIndex === moves.length). */
@@ -22,6 +23,7 @@ function moveNumberLabel(moveIndex: number): string {
 export function LearnPanel({
   line,
   currentMoveIndex,
+  fen,
   expectedMove,
   isLineComplete,
   onAdvance,
@@ -99,6 +101,14 @@ export function LearnPanel({
             Tu viens de voir toute la ligne. On passe en mode entraînement sur
             la MÊME variante pour la fixer en mémoire.
           </p>
+          <a
+            href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg bg-[#2b2b2b] text-white font-bold text-sm hover:bg-[#1a1a1a] transition shadow"
+          >
+            <span>♞ Explorer la suite sur Lichess</span>
+          </a>
           <button
             onClick={onFinishLine}
             className="w-full py-3 rounded-lg bg-green-600 text-white font-bold hover:bg-green-700 transition"

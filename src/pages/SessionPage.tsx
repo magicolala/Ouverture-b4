@@ -203,6 +203,7 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
           <LearnPanel
             line={currentLine}
             currentMoveIndex={state.currentMoveIndex}
+            fen={fen}
             expectedMove={expectedMove}
             isLineComplete={state.phase === "line-complete"}
             onAdvance={session.advanceLearn}

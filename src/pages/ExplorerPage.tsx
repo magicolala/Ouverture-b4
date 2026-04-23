@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Chess, Move } from "chess.js";
 import { ChessboardPanel } from "../components/ChessboardPanel";
+import { computeThreats } from "../lib/threats";
 import { REPERTOIRE } from "../data/repertoire";
 import {
   buildExplorerTree,
@@ -19,6 +20,26 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   const [chess] = useState(() => new Chess());
   const [fen, setFen] = useState(chess.fen());
   const [lastMove, setLastMove] = useState<any>();
+  const [showThreats, setShowThreats] = useState(true);
+
+  // Raccourci clavier « X » pour basculer l'affichage des menaces.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "x" && e.key !== "X") return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      setShowThreats((v) => !v);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const currentNormFen = normalizeFen(fen);
   const currentNode = tree.get(currentNormFen);
@@ -68,8 +89,17 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
         } catch (e) {}
       }
     }
+    
+    // Add threat arrows
+    if (showThreats) {
+      const threats = computeThreats(fen);
+      for (const t of threats) {
+        arrows.push({ from: t.from, to: t.to, color: "red" });
+      }
+    }
+    
     return arrows.length > 0 ? arrows : undefined;
-  }, [fen, mainOccurrence, nextMoves, currentNode]);
+  }, [fen, mainOccurrence, nextMoves, currentNode, showThreats]);
 
   const circlesToShow = mainOccurrence?.circles;
 
@@ -153,6 +183,22 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
             className="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50"
           >
             ↻ Revenir au début
+          </button>
+        </div>
+        <div className="mt-4 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => setShowThreats((v) => !v)}
+            aria-pressed={showThreats}
+            title="Affiche en rouge les pièces du camp au trait qui peuvent être capturées avec gain matériel (raccourci : X)"
+            className={
+              "px-3 py-1.5 rounded-md border text-sm font-medium transition " +
+              (showThreats
+                ? "bg-red-600 text-white border-red-700 hover:bg-red-700"
+                : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50")
+            }
+          >
+            {showThreats ? "⚠ Menaces ON" : "⚠ Afficher les menaces"}
           </button>
         </div>
       </div>
@@ -242,9 +288,19 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
                 )}
 
                 {nextMoves.length === 0 && (
-                  <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
-                    <strong>Fin de la variante !</strong> Vous avez atteint la
-                    fin d'une ligne du répertoire.
+                  <div className="flex flex-col gap-3">
+                    <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm">
+                      <strong>Fin de la variante !</strong> Vous avez atteint la
+                      fin d'une ligne du répertoire.
+                    </div>
+                    <a
+                      href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-lg bg-[#2b2b2b] text-white font-bold text-sm hover:bg-[#1a1a1a] transition shadow"
+                    >
+                      <span>♞ Explorer la suite sur Lichess</span>
+                    </a>
                   </div>
                 )}
               </div>
