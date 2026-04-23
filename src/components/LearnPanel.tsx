@@ -1,4 +1,5 @@
 import type { RepertoireLine, MoveAnnotation } from "../data/repertoire";
+import { LichessStats } from "./LichessStats";
 
 interface LearnPanelProps {
   line: RepertoireLine;
@@ -101,6 +102,9 @@ export function LearnPanel({
             Tu viens de voir toute la ligne. On passe en mode entraînement sur
             la MÊME variante pour la fixer en mémoire.
           </p>
+
+          <LichessStats fen={fen} />
+
           <a
             href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
             target="_blank"

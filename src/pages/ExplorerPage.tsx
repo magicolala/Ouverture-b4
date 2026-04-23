@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Chess, Move } from "chess.js";
 import { ChessboardPanel } from "../components/ChessboardPanel";
+import { LichessStats } from "../components/LichessStats";
 import { computeThreats } from "../lib/threats";
 import { REPERTOIRE } from "../data/repertoire";
 import {
@@ -293,6 +294,9 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
                       <strong>Fin de la variante !</strong> Vous avez atteint la
                       fin d'une ligne du répertoire.
                     </div>
+                    
+                    <LichessStats fen={fen} />
+
                     <a
                       href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
                       target="_blank"
