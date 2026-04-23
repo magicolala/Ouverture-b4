@@ -92,41 +92,56 @@ export function LichessStats({ fen }: { fen: string }) {
 
   if (isUnauthorized) {
     return (
-      <div className="bg-orange-50 border-2 border-orange-200 p-3 rounded-xl mb-4 text-xs">
-        <p className="font-bold text-orange-800 flex items-center gap-2">
-          ⚠️ Authentification Lichess requise
+      <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-2xl mb-4 text-xs shadow-[4px_4px_0_0_#fed7aa]">
+        <p className="font-black uppercase text-orange-800 flex items-center gap-2 mb-2">
+          ⚠️ Accès restreint Lichess
         </p>
-        <p className="text-orange-700 mt-1">
-          Lichess bloque l'accès anonyme. Pour voir les stats, renseignez un jeton (PAT).
+        <p className="text-orange-700 font-bold leading-snug">
+          Lichess demande désormais une authentification pour l'explorateur.
         </p>
-        {!showTokenInput ? (
-          <button 
-            onClick={() => setShowTokenInput(true)}
-            className="mt-2 text-blue-600 font-bold underline underline-offset-2"
+        
+        <div className="mt-4 flex flex-col gap-3">
+          <a 
+            href="https://lichess.org/account/oauth/token/create?scopes[]=explorer:read&description=Sokolsky+App"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="wero-button bg-white text-blue-600 text-[10px] text-center"
           >
-            Configurer mon jeton Lichess
-          </button>
-        ) : (
-          <div className="mt-2 flex gap-2">
-            <input 
-              type="password"
-              placeholder="Votre jeton Lichess (lip_...)"
-              className="flex-1 px-2 py-1 border border-orange-300 rounded text-[10px]"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveToken((e.target as HTMLInputElement).value);
-              }}
-            />
+            🔗 Créer un jeton sur Lichess
+          </a>
+
+          {!showTokenInput ? (
             <button 
-              onClick={(e) => {
-                const input = (e.currentTarget.previousSibling as HTMLInputElement);
-                handleSaveToken(input.value);
-              }}
-              className="px-2 py-1 bg-orange-600 text-white rounded font-bold"
+              onClick={() => setShowTokenInput(true)}
+              className="wero-button bg-orange-600 text-white text-[10px]"
             >
-              OK
+              ⌨️ Saisir mon jeton
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex gap-2">
+              <input 
+                type="password"
+                placeholder="lip_..."
+                className="flex-1 px-3 py-2 border-2 border-black rounded-full text-[10px] font-bold"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveToken((e.target as HTMLInputElement).value);
+                }}
+              />
+              <button 
+                onClick={(e) => {
+                  const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                  handleSaveToken(input.value);
+                }}
+                className="wero-button bg-black text-white px-4 py-2"
+              >
+                OK
+              </button>
+            </div>
+          )}
+        </div>
+        <p className="text-[9px] text-orange-600/70 mt-3 font-medium italic">
+          Le jeton est stocké uniquement dans votre navigateur.
+        </p>
       </div>
     );
   }
