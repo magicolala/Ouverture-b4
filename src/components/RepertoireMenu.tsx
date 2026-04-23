@@ -11,6 +11,7 @@ import type { SessionMode } from "../engine/types";
 interface RepertoireMenuProps {
   onStart: (queue: RepertoireLine[], mode: SessionMode) => void;
   onExplore?: () => void;
+  onDocumentation?: () => void;
 }
 
 const PRIORITY_BADGE: Record<
@@ -31,7 +32,7 @@ const PRIORITY_BADGE: Record<
   },
 };
 
-export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
+export function RepertoireMenu({ onStart, onExplore, onDocumentation }: RepertoireMenuProps) {
   const progress = useMemo(() => progressStore.getAll(), []);
   const [openChapters, setOpenChapters] = useState<Record<string, boolean>>(
     () => Object.fromEntries(CHAPTERS.map((c) => [c.id, c.order === 1])),
@@ -62,17 +63,17 @@ export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
           </p>
         </button>
 
-        {onExplore && (
+        {onDocumentation && (
           <button
-            onClick={onExplore}
+            onClick={onDocumentation}
             className="wero-card p-6 sm:p-8 bg-wero-cyan group flex flex-col items-start text-left"
           >
             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full border-[2px] sm:border-[3px] border-black flex items-center justify-center text-xl sm:text-2xl mb-4 shadow-[2px_2px_0_0_#000] sm:shadow-[3px_3px_0_0_#000]">
-              🔍
+              🎓
             </div>
-            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight mb-2">Explorer Librement</h2>
+            <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight mb-2">Consulter le Guide</h2>
             <p className="font-bold opacity-70 text-[12px] sm:text-sm leading-tight">
-              Parcourez toutes les positions et lisez le cours associé.
+              Apprenez les principes théoriques et stratégiques de 1.b4.
             </p>
           </button>
         )}

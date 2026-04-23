@@ -5,10 +5,11 @@ import type { SessionMode } from "../engine/types";
 interface HomePageProps {
   onStart: (queue: RepertoireLine[], mode: SessionMode) => void;
   onExplore: () => void;
+  onDocumentation: () => void;
   onAdmin: () => void;
 }
 
-export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
+export function HomePage({ onStart, onExplore, onDocumentation, onAdmin }: HomePageProps) {
   return (
     <div className="min-h-screen text-black selection:bg-wero-yellow flex flex-col">
       {/* Rick Chess Coach Branding Header */}
@@ -39,8 +40,29 @@ export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
           Entraînez-vous sur le système complet construit par <strong>Rick Wallas</strong> pour dominer avec l'Orang-outan.
         </p>
 
+        <div className="flex flex-wrap justify-center gap-4 mb-12">
+          <button 
+            onClick={onDocumentation}
+            className="wero-button bg-wero-purple text-white flex items-center gap-3 py-4 sm:py-5 px-8 sm:px-10"
+          >
+            <span className="text-xl">🎓</span>
+            <span className="text-xs sm:text-sm">Lire le Guide</span>
+          </button>
+          <button 
+            onClick={onExplore}
+            className="wero-button bg-white text-black flex items-center gap-3 py-4 sm:py-5 px-8 sm:px-10"
+          >
+            <span className="text-xl">🔍</span>
+            <span className="text-xs sm:text-sm">Explorer</span>
+          </button>
+        </div>
+
         <main className="max-w-6xl mx-auto pb-20 text-left">
-          <RepertoireMenu onStart={onStart} onExplore={onExplore} />
+          <RepertoireMenu 
+            onStart={onStart} 
+            onExplore={onExplore} 
+            onDocumentation={onDocumentation} 
+          />
           
           {["localhost", "127.0.0.1"].includes(window.location.hostname) && (
             <div className="max-w-3xl mx-auto mt-12">

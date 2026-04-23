@@ -10,6 +10,7 @@ import {
 import { HomePage } from "./pages/HomePage";
 import { SessionPage } from "./pages/SessionPage";
 import { ExplorerPage } from "./pages/ExplorerPage";
+import { DocumentationPage } from "./pages/DocumentationPage";
 
 export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
@@ -61,6 +62,7 @@ export default function App() {
             <HomePage
               onStart={handleStartSession}
               onExplore={() => navigate("/explorer")}
+              onDocumentation={() => navigate("/documentation")}
               onAdmin={() => navigate("/admin")}
             />
           }
@@ -78,6 +80,10 @@ export default function App() {
         <Route
           path="/admin"
           element={<AdminPanel onExit={() => navigate("/")} />}
+        />
+        <Route
+          path="/documentation"
+          element={<DocumentationPage onExit={() => navigate("/")} />}
         />
       </Routes>
     </div>
