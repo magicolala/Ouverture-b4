@@ -167,7 +167,7 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-wero-bg p-6">
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-8 items-start">
         {/* Board Column */}
         <div className="flex-1 flex flex-col items-center">

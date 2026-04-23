@@ -10,7 +10,7 @@ interface HomePageProps {
 
 export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
   return (
-    <div className="min-h-screen bg-wero-bg text-black selection:bg-wero-yellow flex flex-col">
+    <div className="min-h-screen text-black selection:bg-wero-yellow flex flex-col">
       {/* Rick Chess Coach Branding Header */}
       <div className="w-full bg-black text-white py-3 px-6 flex justify-between items-center border-b-[4px] border-black">
         <div className="flex items-center gap-2">
