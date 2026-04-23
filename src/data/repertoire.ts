@@ -5,7 +5,9 @@ export const C = {
 
   E5: "<em>1...e5 — la réponse la plus fréquente.</em> Noir prend directement le centre, obtenant une part d'espace central légèrement supérieure à celle des ouvertures classiques. Ce coup libère également le fou f8 qui <strong>met immédiatement le pion b4 sous pression</strong>.<br>Face à cela, <strong>2.a3</strong> et <strong>2.Fb2</strong> sont toutes deux de bonnes réponses. En jouant 2.Fb2, on accepte souvent de \"sacrifier\" le pion b4 : notre compensation est une grande <strong>activité</strong>, un développement fluide et une forte pression sur <strong>e5</strong> via la diagonale a1–h8.",
 
-  BB2: "<em>2.Fb2 — Coup pivot et fianchetto immédiat.</em> Le fou s’installe sur la grande diagonale et attaque <strong>e5</strong> (et l'aile roi), tout en laissant le pion b4 sans protection. L'idée est que le pion central noir a plus de valeur que notre pion de flanc. C'est une position relativement peu explorée.<br><strong>Réponses noires typiques :</strong><br>• <strong>2...Fxb4</strong> force pratiquement 3.Fxe5 (position incertaine, léger avantage Blanc selon les machines).<br>• <strong>2...d6</strong> défend e5 mais annule la pression sur b4.<br>• <strong>2...d5</strong> prend le centre, mais gare au piège après 3.Fxe5 Fxb4?? 4.Fxg7! (Blanc gagne la tour).<br>• <strong>2...Cc6?</strong> est une erreur : sur 3.b5!, le cavalier doit fuir et Blanc gagne le pion avec 4.Fxe5.",
+  BB2_E5: "<em>2.Fb2 — Coup pivot et fianchetto immédiat.</em> Le fou s’installe sur la grande diagonale et attaque <strong>e5</strong> (et l'aile roi), tout en laissant le pion b4 sans protection. L'idée est que le pion central noir a plus de valeur que notre pion de flanc. C'est une position relativement peu explorée.<br><strong>Réponses noires typiques :</strong><br>• <strong>2...Fxb4</strong> force pratiquement 3.Fxe5 (position incertaine, léger avantage Blanc selon les machines).<br>• <strong>2...d6</strong> défend e5 mais annule la pression sur b4.<br>• <strong>2...d5</strong> prend le centre, mais gare au piège après 3.Fxe5 Fxb4?? 4.Fxg7! (Blanc gagne la tour).<br>• <strong>2...Cc6?</strong> est une erreur : sur 3.b5!, le cavalier doit fuir et Blanc gagne le pion avec 4.Fxe5.",
+
+  BB2: "<em>2.Fb2 — Le fianchetto classique.</em> Le fou s’installe sur la grande diagonale a1-h8 pour contrôler le centre à distance et préparer la suite du développement. C'est le coup emblématique de la Sokolsky.",
 
   D6: "Défense solide de <strong>e5</strong> (structure <strong>type Philidor</strong>). En échange, Noir limite un peu son jeu : le fou f8 manque d’air. Profite du tempo pour jouer <strong>c4</strong>, finir ton développement et préparer une poussée centrale (<strong>d4</strong>) au bon moment.",
 
@@ -188,7 +190,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Nf6", comment: C.NF6, circles: [{"square":"e4","color":"yellow"}] },
@@ -211,7 +213,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "d5", circles: [{"square":"e5","color":"red"}] },
       { san: "Bxe5", circles: [{"square":"e5","color":"green"}] },
       { san: "Nc6" },
@@ -228,7 +230,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nf6", comment: C.NF6 },
       { san: "Bxe5" },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
@@ -247,7 +249,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nf6", comment: C.NF6 },
       { san: "Bxe5" },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
@@ -266,7 +268,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nf6", comment: C.NF6 },
       { san: "Bxe5" },
       { san: "Bxb4", comment: C.PIEGE_BXB4_ERROR },
@@ -289,7 +291,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Bxb4", comment: C.BXB4_IMMEDIATE, circles: [{"square":"e5","color":"red"},{"square":"g7","color":"yellow"}] },
       { san: "Bxe5", comment: C.BXE5_RECAPTURE, circles: [{"square":"e5","color":"green"},{"square":"g7","color":"red"}] },
     ]
@@ -305,7 +307,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nc6", circles: [{"square":"c6","color":"red"}] },
       { san: "b5", circles: [{"square":"c6","color":"red"}] },
       { san: "Nd4" },
@@ -326,7 +328,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nc6", circles: [{"square":"c6","color":"red"}] },
       { san: "b5", circles: [{"square":"c6","color":"red"}] },
       { san: "Nd4" },
@@ -347,7 +349,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4 },
       { san: "e5", comment: C.E5 },
-      { san: "Bb2", comment: C.BB2 },
+      { san: "Bb2", comment: C.BB2_E5 },
       { san: "Nc6", circles: [{"square":"c6","color":"red"}] },
       { san: "b5", circles: [{"square":"c6","color":"red"}] },
       { san: "Nd4" },
@@ -370,7 +372,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "f6" },
       { san: "a3", comment: C.A3_MANDATORY },
       { san: "d5" },
@@ -387,7 +389,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "e4" },
       { san: "e3", comment: C.E3 },
       { san: "d5" },
@@ -406,7 +408,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "Qf6" },
       { san: "a3", comment: C.A3_MANDATORY },
     ]
@@ -421,7 +423,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Be6" },
@@ -438,7 +440,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Nc6" },
@@ -457,7 +459,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Bf5" },
@@ -474,7 +476,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "a6" },
@@ -491,7 +493,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "f5" },
@@ -514,7 +516,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Be7", comment: C.BE7 },
@@ -535,7 +537,7 @@ export const REPERTOIRE: RepertoireLine[] = [
     moves: [
       { san: "b4", comment: C.B4, circles: [{"square":"b4","color":"green"},{"square":"h8","color":"yellow"}] },
       { san: "e5", comment: C.E5, circles: [{"square":"e5","color":"red"}] },
-      { san: "Bb2", comment: C.BB2, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
+      { san: "Bb2", comment: C.BB2_E5, circles: [{"square":"b2","color":"green"},{"square":"e5","color":"red"}] },
       { san: "d6", comment: C.D6 },
       { san: "e3", comment: C.E3 },
       { san: "Nf6", comment: C.NF6, circles: [{"square":"e4","color":"yellow"}] },
