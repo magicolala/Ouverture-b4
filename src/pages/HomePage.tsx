@@ -4,13 +4,14 @@ import type { SessionMode } from "../engine/types";
 
 interface HomePageProps {
   onStart: (queue: RepertoireLine[], mode: SessionMode) => void;
+  onExplore: () => void;
   onAdmin: () => void;
 }
 
-export function HomePage({ onStart, onAdmin }: HomePageProps) {
+export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
   return (
     <>
-      <RepertoireMenu onStart={onStart} />
+      <RepertoireMenu onStart={onStart} onExplore={onExplore} />
       {["localhost", "127.0.0.1"].includes(window.location.hostname) && (
         <div className="max-w-3xl mx-auto px-4 pb-6">
           <button

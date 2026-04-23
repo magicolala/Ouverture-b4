@@ -9,6 +9,7 @@ import {
 } from "./lib/validateRepertoire";
 import { HomePage } from "./pages/HomePage";
 import { SessionPage } from "./pages/SessionPage";
+import { ExplorerPage } from "./pages/ExplorerPage";
 
 export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
@@ -45,6 +46,7 @@ export default function App() {
           element={
             <HomePage
               onStart={handleStartSession}
+              onExplore={() => navigate("/explorer")}
               onAdmin={() => navigate("/admin")}
             />
           }
@@ -54,6 +56,10 @@ export default function App() {
           element={
             <SessionPage session={session} onExit={handleExitSession} />
           }
+        />
+        <Route
+          path="/explorer"
+          element={<ExplorerPage onExit={() => navigate("/")} />}
         />
         <Route
           path="/admin"

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Chess } from "chess.js";
 import { computeThreats } from "../lib/threats";
 import { ChessboardPanel } from "../components/ChessboardPanel";
@@ -11,6 +12,7 @@ import { playMoveSound, playErrorSound, playSuccessSound } from "../lib/sounds";
 // Since it's a custom hook, we can extract its return type or just use `any` for simplicity if types aren't exported.
 // Let's assume `ReturnType<typeof useSession>` is available if we import `useSession`, but we can also just use `any` or generic.
 import { useSession } from "../engine/useSession";
+import { REPERTOIRE } from "../data/repertoire";
 
 interface SessionPageProps {
   session: ReturnType<typeof useSession>;
@@ -20,6 +22,26 @@ interface SessionPageProps {
 export function SessionPage({ session, onExit }: SessionPageProps) {
   const { state, currentLine, fen, lastMove, expectedMove } = session;
   const [showThreats, setShowThreats] = useState(true);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (state.queue.length === 0) {
+      const chapterId = searchParams.get("chapterId");
+      const lineName = searchParams.get("lineName");
+      
+      if (lineName) {
+        const line = REPERTOIRE.find((l) => l.name === lineName);
+        if (line) {
+          session.start([line], "learn");
+        }
+      } else if (chapterId) {
+        const lines = REPERTOIRE.filter((l) => l.chapter === chapterId);
+        if (lines.length > 0) {
+          session.start(lines, "learn");
+        }
+      }
+    }
+  }, [searchParams, state.queue.length, session]);
 
   // Sons sur changements d'état.
   useEffect(() => {

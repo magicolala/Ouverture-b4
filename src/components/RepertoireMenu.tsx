@@ -11,6 +11,8 @@ import type { SessionMode } from "../engine/types";
 interface RepertoireMenuProps {
   /** Démarre une session avec une file de lignes. */
   onStart: (queue: RepertoireLine[], mode: SessionMode) => void;
+  /** Lance l'explorateur en mode libre */
+  onExplore?: () => void;
 }
 
 const PRIORITY_BADGE: Record<
@@ -31,7 +33,7 @@ const PRIORITY_BADGE: Record<
   },
 };
 
-export function RepertoireMenu({ onStart }: RepertoireMenuProps) {
+export function RepertoireMenu({ onStart, onExplore }: RepertoireMenuProps) {
   // Lu une fois au montage : suffisant tant qu'on ne reste pas sur l'écran pendant une session.
   const progress = useMemo(() => progressStore.getAll(), []);
   const [openChapters, setOpenChapters] = useState<Record<string, boolean>>(
@@ -65,6 +67,18 @@ export function RepertoireMenu({ onStart }: RepertoireMenuProps) {
           Entraînement sur toutes les lignes must-know
         </span>
       </button>
+
+      {onExplore && (
+        <button
+          onClick={onExplore}
+          className="w-full py-4 px-4 rounded-xl bg-blue-600 text-white font-bold text-lg shadow-[4px_4px_0_0_#111] border-2 border-black hover:bg-blue-700 transition"
+        >
+          🔍 Explorer le répertoire librement
+          <span className="block text-xs font-normal mt-1 opacity-90">
+            Parcourez librement toutes les positions et lisez le cours associé
+          </span>
+        </button>
+      )}
 
       {CHAPTERS.map((chapter) => {
         const isOpen = openChapters[chapter.id];
