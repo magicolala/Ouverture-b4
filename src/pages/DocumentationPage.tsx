@@ -154,14 +154,26 @@ export function DocumentationPage({ onExit }: DocumentationPageProps) {
         </section>
 
         {/* Footer message */}
-        <div className="text-center py-12">
-          <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-4">Prêt à dominer ?</p>
-          <button 
-            onClick={() => navigate("/")}
-            className="wero-button bg-wero-purple text-white text-lg px-12 py-6"
+        <div className="text-center py-12 flex flex-col items-center gap-6">
+          <div>
+            <p className="text-sm font-black uppercase tracking-widest text-gray-400 mb-4">Prêt à dominer ?</p>
+            <button 
+              onClick={() => navigate("/")}
+              className="wero-button bg-wero-purple text-white text-lg px-12 py-6"
+            >
+              Commencer l'Entraînement
+            </button>
+          </div>
+          
+          <a 
+            href="https://github.com/magicolala" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 border-2 border-black rounded-full hover:bg-black hover:text-white transition-colors shadow-[2px_2px_0_0_#000]"
           >
-            Commencer l'Entraînement
-          </button>
+            <span>GitHub</span>
+            <span className="opacity-40">@magicolala</span>
+          </a>
         </div>
       </main>
     </div>

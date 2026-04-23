@@ -87,9 +87,18 @@ export function HomePage({ onStart, onExplore, onDocumentation, onAdmin }: HomeP
             <p className="text-xs font-black uppercase tracking-widest mb-1">
               Rick Chess Coach
             </p>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-4">
               Design & Répertoire par Rick Wallas • © 2026
             </p>
+            <a 
+              href="https://github.com/magicolala" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest px-4 py-2 border-2 border-black rounded-full hover:bg-black hover:text-white transition-colors shadow-[2px_2px_0_0_#000]"
+            >
+              <span>GitHub</span>
+              <span className="opacity-40">@magicolala</span>
+            </a>
           </div>
         </div>
       </footer>
