@@ -25,8 +25,11 @@ export function LichessStats({ fen }: { fen: string }) {
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('lichess_token') || '');
+  const [isHidden, setIsHidden] = useState(localStorage.getItem('lichess_stats_hidden') === 'true');
 
   useEffect(() => {
+    if (isHidden) return;
+    
     let isMounted = true;
     setLoading(true);
     setIsUnauthorized(false);
@@ -114,12 +117,19 @@ export function LichessStats({ fen }: { fen: string }) {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [fen, token, db]);
+  }, [fen, token, db, isHidden]);
 
   const handleSaveToken = (newToken: string) => {
-    localStorage.setItem('lichess_token', newToken);
-    setToken(newToken);
+    const trimmed = newToken.trim();
+    localStorage.setItem('lichess_token', trimmed);
+    setToken(trimmed);
     setShowTokenInput(false);
+  };
+
+  const toggleHidden = () => {
+    const next = !isHidden;
+    setIsHidden(next);
+    localStorage.setItem('lichess_stats_hidden', String(next));
   };
 
   const formatNumber = (num: number) => {
@@ -128,8 +138,19 @@ export function LichessStats({ fen }: { fen: string }) {
     return num.toString();
   };
 
+  if (isHidden) {
+    return (
+      <button 
+        onClick={toggleHidden}
+        className="w-full py-3 border-2 border-dashed border-black/10 rounded-2xl text-[9px] font-black uppercase tracking-widest text-gray-400 hover:border-black/30 hover:text-gray-600 transition-all"
+      >
+        📊 Afficher les stats mondiales Lichess
+      </button>
+    );
+  }
+
   return (
-    <div className="bg-white border-[3px] border-black p-3 pt-2 rounded-2xl shadow-[4px_4px_0_0_#111] mb-4 sm:mb-6 shrink-0 transition-opacity animate-in fade-in">
+    <div className="bg-white border-[3px] border-black p-3 pt-2 rounded-2xl shadow-[4px_4px_0_0_#111] mb-4 sm:mb-6 shrink-0 transition-all animate-in fade-in slide-in-from-bottom-2">
       <div className="flex justify-between items-center mb-4">
         <div className="flex gap-1 bg-gray-100 p-1 rounded-full border-[2px] border-black">
           <button 
@@ -145,60 +166,91 @@ export function LichessStats({ fen }: { fen: string }) {
             MASTERS
           </button>
         </div>
-        {stats && !loading && !isUnauthorized && (
-          <span className="text-[9px] uppercase tracking-widest font-bold text-gray-400">{formatNumber(stats.total)} parties</span>
-        )}
+        <div className="flex items-center gap-2">
+          {stats && !loading && !isUnauthorized && (
+            <span className="text-[9px] uppercase tracking-widest font-bold text-gray-400">{formatNumber(stats.total)} parties</span>
+          )}
+          <button 
+            onClick={toggleHidden}
+            title="Masquer les stats"
+            className="w-5 h-5 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 hover:text-black transition-colors"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       {loading && (
         <div className="py-8 flex flex-col items-center justify-center gap-2">
           <div className="w-6 h-6 border-[3px] border-black border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Chargement...</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Analyse Lichess...</p>
         </div>
       )}
 
       {isUnauthorized && !loading && (
-        <div className="bg-orange-50 border-2 border-orange-200 p-4 rounded-xl mb-2">
-          <p className="text-[10px] font-black uppercase text-orange-800 mb-2">⚠️ Accès restreint</p>
-          <p className="text-[10px] text-orange-700 font-bold leading-tight mb-3">Lichess demande une authentification.</p>
+        <div className="bg-wero-cyan/5 border-2 border-black/10 p-4 rounded-xl mb-2 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-16 h-16 bg-wero-cyan/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-wero-cyan/20 transition-all"></div>
           
-          <div className="flex flex-col gap-2">
-            {!showTokenInput ? (
-              <button 
-                onClick={() => setShowTokenInput(true)}
-                className="wero-button !py-1.5 !text-[9px] bg-orange-600 text-white"
-              >
-                Saisir mon jeton
-              </button>
-            ) : (
-              <div className="flex gap-1">
-                <input 
-                  type="password"
-                  placeholder="lip_..."
-                  className="flex-1 px-3 py-1.5 border-2 border-black rounded-full text-[9px] font-bold"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveToken((e.target as HTMLInputElement).value);
-                  }}
-                />
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm">🔑</span>
+              <p className="text-[10px] font-black uppercase text-black">Jeton API Requis</p>
+            </div>
+            <p className="text-[9px] text-gray-600 font-bold leading-tight mb-4">
+              Lichess a restreint son explorateur. Pour voir les stats, créez un jeton gratuit sur leur site.
+            </p>
+            
+            <div className="flex flex-col gap-2">
+              {!showTokenInput ? (
                 <button 
-                  onClick={(e) => {
-                    const input = (e.currentTarget.previousSibling as HTMLInputElement);
-                    handleSaveToken(input.value);
-                  }}
-                  className="wero-button !py-1 !px-3 bg-black text-white"
+                  onClick={() => setShowTokenInput(true)}
+                  className="wero-button !py-2 !text-[9px] bg-black text-white w-full"
                 >
-                  OK
+                  Configurer mon accès
                 </button>
-              </div>
-            )}
-            <a 
-              href="https://lichess.org/account/oauth/token/create?scopes[]=explorer:read&description=Sokolsky+App"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[8px] font-bold text-blue-600 hover:underline text-center"
-            >
-              Créer un jeton sur Lichess.org
-            </a>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex gap-1">
+                    <input 
+                      type="password"
+                      placeholder="Collez votre jeton lip_..."
+                      autoFocus
+                      className="flex-1 px-3 py-2 border-2 border-black rounded-xl text-[9px] font-bold focus:ring-2 focus:ring-wero-cyan outline-none"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveToken((e.target as HTMLInputElement).value);
+                      }}
+                    />
+                    <button 
+                      onClick={(e) => {
+                        const input = (e.currentTarget.previousSibling as HTMLInputElement);
+                        handleSaveToken(input.value);
+                      }}
+                      className="wero-button !py-1 !px-4 bg-wero-cyan text-black"
+                    >
+                      OK
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => setShowTokenInput(false)}
+                    className="text-[8px] font-black uppercase text-gray-400 hover:text-black w-full text-center"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
+              
+              {!showTokenInput && (
+                <a 
+                  href="https://lichess.org/account/oauth/token/create?scopes[]=explorer:read&description=Sokolsky+App"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[9px] font-bold text-wero-purple hover:underline text-center flex items-center justify-center gap-1 mt-1"
+                >
+                  <span>Créer un jeton sur Lichess.org</span>
+                  <span className="text-[10px]">↗</span>
+                </a>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -274,7 +326,7 @@ export function LichessStats({ fen }: { fen: string }) {
                       </span>
                     )}
                   </div>
-                  <div className="text-[10px] font-bold truncate group-hover:underline">
+                  <div className="text-[10px] font-bold truncate group-hover:underline text-black">
                     {g.white.name} vs {g.black.name}
                   </div>
                 </a>
@@ -284,15 +336,30 @@ export function LichessStats({ fen }: { fen: string }) {
         </div>
       )}
 
-      {token && (
+      {!loading && isUnauthorized && token && (
+        <div className="mt-4 p-2 bg-red-50 border border-red-200 rounded-lg text-center">
+          <p className="text-[8px] font-black text-red-600 uppercase mb-2">Jeton actuel invalide ou expiré</p>
+          <button 
+            onClick={() => {
+              localStorage.removeItem('lichess_token');
+              setToken('');
+            }}
+            className="text-[9px] font-black text-white bg-red-600 px-4 py-1 rounded-full uppercase tracking-tighter"
+          >
+            Effacer et recommencer
+          </button>
+        </div>
+      )}
+
+      {token && !isUnauthorized && !loading && (
         <button 
           onClick={() => {
             localStorage.removeItem('lichess_token');
             setToken('');
           }}
-          className="mt-4 text-[8px] text-gray-400 hover:text-red-500 uppercase font-black tracking-tighter"
+          className="mt-6 text-[8px] text-gray-300 hover:text-red-500 uppercase font-black tracking-tighter transition-colors w-full text-center"
         >
-          Effacer mon jeton Lichess
+          Déconnecter mon compte Lichess
         </button>
       )}
     </div>
