@@ -22,7 +22,7 @@ import type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 type Action =
-  | { type: "START"; queue: RepertoireLine[]; mode: SessionMode }
+  | { type: "START"; queue: RepertoireLine[]; mode: SessionMode; initialMoveIndex?: number }
   | { type: "ADVANCE_LEARN" } // LEARN : "coup suivant" (ou coup joué correctement)
   | { type: "USER_PLAYED_CORRECT" } // PRACTICE : bon coup joué
   | { type: "USER_PLAYED_WRONG"; san: string } // PRACTICE : mauvais coup (ou illégal refusé → ailleurs)
@@ -66,10 +66,9 @@ function reducer(state: SessionState, action: Action): SessionState {
     case "START": {
       if (action.queue.length === 0) return state;
       const line = action.queue[0];
-      // En PRACTICE, si (hypothétiquement) le 1er coup était noir, on attendrait
-      // l'adversaire. Dans notre répertoire il est toujours blanc, mais on reste générique.
+      const moveIdx = action.initialMoveIndex ?? 0;
       const phase: SessionPhase =
-        action.mode === "practice" && !isWhiteMoveIndex(0)
+        action.mode === "practice" && !isWhiteMoveIndex(moveIdx)
           ? "waiting-opponent"
           : "playing";
       return {
@@ -77,7 +76,7 @@ function reducer(state: SessionState, action: Action): SessionState {
         phase,
         queue: action.queue,
         currentLineIndex: 0,
-        currentMoveIndex: 0,
+        currentMoveIndex: moveIdx,
         attemptsOnCurrentMove: 0,
         showSolution: false,
         stats: { ...emptyStats(), totalUserMoves: countWhiteMoves(line) },
@@ -263,7 +262,7 @@ export interface UseSessionResult {
   /** En PRACTICE, true si c'est au joueur blanc de jouer. */
   isUserTurn: boolean;
 
-  start(queue: RepertoireLine[], mode: SessionMode): void;
+  start(queue: RepertoireLine[], mode: SessionMode, initialMoveIndex?: number): void;
   /** Tente de jouer un coup (from/to/promotion). Retourne "ok", "wrong" ou "illegal". */
   tryUserMove(
     from: string,
@@ -356,8 +355,8 @@ export function useSession(
   // ── Actions exposées ──
 
   const start = useCallback(
-    (queue: RepertoireLine[], mode: SessionMode) => {
-      dispatch({ type: "START", queue, mode });
+    (queue: RepertoireLine[], mode: SessionMode, initialMoveIndex?: number) => {
+      dispatch({ type: "START", queue, mode, initialMoveIndex });
     },
     [],
   );

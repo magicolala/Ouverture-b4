@@ -22,26 +22,56 @@ interface SessionPageProps {
 export function SessionPage({ session, onExit }: SessionPageProps) {
   const { state, currentLine, fen, lastMove, expectedMove } = session;
   const [showThreats, setShowThreats] = useState(true);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  // Load from URL on mount
   useEffect(() => {
     if (state.queue.length === 0) {
       const chapterId = searchParams.get("chapterId");
       const lineName = searchParams.get("lineName");
+      const mode = (searchParams.get("mode") as any) || "learn";
+      const moveIndexStr = searchParams.get("move");
+      const moveIndex = moveIndexStr ? parseInt(moveIndexStr, 10) : 0;
       
       if (lineName) {
         const line = REPERTOIRE.find((l) => l.name === lineName);
         if (line) {
-          session.start([line], "learn");
+          session.start([line], mode, moveIndex);
         }
       } else if (chapterId) {
         const lines = REPERTOIRE.filter((l) => l.chapter === chapterId);
         if (lines.length > 0) {
-          session.start(lines, "learn");
+          session.start(lines, mode);
         }
       }
     }
   }, [searchParams, state.queue.length, session]);
+
+  // Sync state to URL
+  useEffect(() => {
+    if (state.queue.length > 0 && currentLine) {
+      const params: any = { 
+        lineName: currentLine.name,
+        mode: state.mode 
+      };
+      if (state.currentMoveIndex > 0) {
+        params.move = state.currentMoveIndex.toString();
+      }
+      
+      // Only update if different
+      const currentLineInUrl = searchParams.get("lineName");
+      const currentMoveInUrl = searchParams.get("move") || "0";
+      const currentModeInUrl = searchParams.get("mode");
+      
+      if (
+        currentLineInUrl !== params.lineName || 
+        currentMoveInUrl !== (params.move || "0") ||
+        currentModeInUrl !== params.mode
+      ) {
+        setSearchParams(params, { replace: true });
+      }
+    }
+  }, [currentLine, state.mode, state.currentMoveIndex, state.queue.length, setSearchParams, searchParams]);
 
   // Sons sur changements d'état.
   useEffect(() => {
