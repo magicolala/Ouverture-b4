@@ -189,11 +189,16 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
         <aside className="w-full lg:w-[460px] flex flex-col gap-6">
           <div className="wero-card p-0 overflow-hidden flex flex-col bg-white">
             <header className="p-6 bg-black text-white flex items-center justify-between gap-4">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-wero-cyan mb-1">
-                  Mode Libre
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-wero-yellow rounded-xl border-2 border-white flex items-center justify-center font-black text-black text-xs shadow-[2px_2px_0_0_#fff]">
+                  R
                 </div>
-                <h2 className="text-xl font-black uppercase tracking-tight">Explorateur</h2>
+                <div>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-wero-cyan mb-0.5">
+                    Rick Chess Coach
+                  </div>
+                  <h2 className="text-xl font-black uppercase tracking-tight leading-none">Explorateur</h2>
+                </div>
               </div>
               <button
                 onClick={onExit}

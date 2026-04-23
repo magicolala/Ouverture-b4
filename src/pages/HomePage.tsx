@@ -10,42 +10,66 @@ interface HomePageProps {
 
 export function HomePage({ onStart, onExplore, onAdmin }: HomePageProps) {
   return (
-    <div className="min-h-screen bg-wero-bg text-black selection:bg-wero-yellow">
+    <div className="min-h-screen bg-wero-bg text-black selection:bg-wero-yellow flex flex-col">
+      {/* Rick Chess Coach Branding Header */}
+      <div className="w-full bg-black text-white py-3 px-6 flex justify-between items-center border-b-[4px] border-black">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-wero-yellow rounded-lg border-2 border-white flex items-center justify-center font-black text-black text-sm shadow-[2px_2px_0_0_#fff]">
+            R
+          </div>
+          <span className="font-black uppercase tracking-tighter text-sm italic">Rick Chess Coach</span>
+        </div>
+        <div className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-wero-cyan">
+          Premium Training System
+        </div>
+      </div>
+
       {/* Hero Section */}
-      <section className="pt-20 pb-12 px-6 text-center max-w-4xl mx-auto">
-        <div className="inline-block px-4 py-1.5 rounded-full bg-wero-cyan border-[3px] border-black font-black text-[10px] uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000]">
-          Sokolsky Repertoire v4
+      <section className="pt-20 pb-12 px-6 text-center max-w-4xl mx-auto flex-1">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-wero-cyan border-[3px] border-black font-black text-[10px] uppercase tracking-widest mb-6 shadow-[3px_3px_0_0_#000]">
+          <span>Sokolsky Repertoire v4</span>
+          <span className="opacity-40">|</span>
+          <span className="text-white">By Rick Wallas</span>
         </div>
         <h1 className="text-6xl md:text-8xl font-[900] leading-[0.9] tracking-tighter mb-8 italic">
           MAÎTRISEZ <br />
           <span className="text-wero-purple">L'OUVERTURE 1.b4</span>
         </h1>
         <p className="text-lg md:text-xl font-bold text-gray-600 max-w-xl mx-auto leading-relaxed mb-10">
-          Explorez, apprenez et maîtrisez l'Ouverture Sokolsky avec un système 
-          d'entraînement dynamique.
+          Entraînez-vous sur le système complet construit par <strong>Rick Wallas</strong> pour dominer avec l'Orang-outan.
         </p>
+
+        <main className="max-w-6xl mx-auto pb-20 text-left">
+          <RepertoireMenu onStart={onStart} onExplore={onExplore} />
+          
+          {["localhost", "127.0.0.1"].includes(window.location.hostname) && (
+            <div className="max-w-3xl mx-auto mt-12">
+              <button
+                onClick={onAdmin}
+                className="wero-button bg-black text-white w-full py-5 flex items-center justify-center gap-4"
+              >
+                <span className="text-lg">⚙️</span>
+                <span className="uppercase tracking-widest text-xs">Accès Créateur • Admin Panel</span>
+              </button>
+            </div>
+          )}
+        </main>
       </section>
 
-      <main className="max-w-6xl mx-auto px-4 pb-20">
-        <RepertoireMenu onStart={onStart} onExplore={onExplore} />
-        
-        {["localhost", "127.0.0.1"].includes(window.location.hostname) && (
-          <div className="max-w-3xl mx-auto mt-12">
-            <button
-              onClick={onAdmin}
-              className="w-full py-4 px-6 rounded-[2rem] bg-black text-white font-black text-sm uppercase tracking-widest hover:bg-gray-800 transition shadow-[6px_6px_0_0_#ccc] flex items-center justify-center gap-2"
-            >
-              <span>⚙️ Mode Admin</span>
-              <span className="opacity-40 font-bold">• Éditer le répertoire</span>
-            </button>
+      <footer className="py-12 border-t-[4px] border-black bg-white text-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 bg-wero-purple rounded-2xl border-[3px] border-black flex items-center justify-center text-2xl shadow-[4px_4px_0_0_#000]">
+            👑
           </div>
-        )}
-      </main>
-
-      <footer className="py-12 border-t-[3px] border-black bg-white text-center">
-        <p className="text-[10px] font-black uppercase tracking-widest opacity-30">
-          Chess Repertoire Master • Sokolsky Edition
-        </p>
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest mb-1">
+              Rick Chess Coach
+            </p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">
+              Design & Répertoire par Rick Wallas • © 2026
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   );

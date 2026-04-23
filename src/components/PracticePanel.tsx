@@ -50,88 +50,93 @@ export function PracticePanel({
   const progressPct = Math.round((currentMoveIndex / totalMoves) * 100);
 
   return (
-    <div className="flex flex-col gap-4 p-4 bg-white border-2 border-black rounded-xl shadow-[4px_4px_0_0_#111]">
-      <header className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-xs uppercase tracking-wider text-orange-600 font-bold">
-            Mode Entraînement
+    <div className="wero-card p-0 overflow-hidden flex flex-col bg-white">
+      <header className="p-6 bg-black text-white flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 bg-wero-yellow rounded-xl border-2 border-white flex items-center justify-center font-black text-black text-xs shadow-[2px_2px_0_0_#fff]">
+            R
           </div>
-          <h2 className="text-lg font-bold">{line.name}</h2>
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-wero-salmon mb-0.5">
+              Rick Chess Coach
+            </div>
+            <h2 className="text-xl font-black uppercase tracking-tight leading-none">{line.name}</h2>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={onRestart}
-            className="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
-            title="Recommencer la variante"
+            className="text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-full border-2 border-white/20 hover:bg-white/10 transition"
+            title="Restart line"
           >
             ↻
           </button>
           <button
             onClick={onExit}
-            className="text-sm px-3 py-1 rounded border border-gray-300 hover:bg-gray-100"
+            className="text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full border-2 border-white/20 hover:bg-white/10 transition"
           >
             ← Menu
           </button>
         </div>
       </header>
 
-      <div className="h-2 w-full bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-orange-500 transition-all"
-          style={{ width: `${progressPct}%` }}
-        />
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-gray-600">Essais :</span>
-          <AttemptDots attempts={attemptsOnCurrentMove} />
-        </div>
-        <div className="text-xs text-gray-500">
-          {currentMoveIndex} / {totalMoves}
-        </div>
-      </div>
-
-      {/* Zone de statut */}
-      {!showSolution && isWaitingOpponent && (
-        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-sm text-blue-800">
-          L'adversaire réfléchit…
-        </div>
-      )}
-
-      {!showSolution && isUserTurn && (
-        <div className="p-3 rounded-lg bg-gray-50 border border-gray-200 text-sm">
-          À toi de jouer. Trouve le bon coup !
-          {lastError && (
-            <div className="mt-2 text-red-600 font-semibold">
-              ✗ {lastError} n'est pas le coup attendu.
-            </div>
-          )}
-        </div>
-      )}
-
-      {showSolution && expectedMove && (
-        <div className="flex flex-col gap-3 p-4 bg-yellow-50 border-2 border-yellow-500 rounded-lg">
-          <div className="text-sm font-bold text-yellow-900">
-            Solution révélée
-          </div>
-          <div className="font-mono text-xl font-bold">
-            {expectedMove.san}
-          </div>
-          {expectedMove.comment && (
+      <div className="p-6 flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <div className="h-4 w-full bg-gray-100 rounded-full border-[2.5px] border-black overflow-hidden shadow-[2px_2px_0_0_#000]">
             <div
-              className="text-sm leading-relaxed text-yellow-900"
-              dangerouslySetInnerHTML={{ __html: expectedMove.comment }}
+              className="h-full bg-wero-salmon transition-all duration-500"
+              style={{ width: `${progressPct}%` }}
             />
-          )}
-          <button
-            onClick={onContinueAfterSolution}
-            className="w-full py-2 rounded-lg bg-yellow-600 text-white font-bold hover:bg-yellow-700 transition"
-          >
-            Continuer →
-          </button>
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest text-gray-400">
+            <div className="flex items-center gap-2">
+              <span>Essais :</span>
+              <AttemptDots attempts={attemptsOnCurrentMove} />
+            </div>
+            <div>{currentMoveIndex} / {totalMoves} coups</div>
+          </div>
         </div>
-      )}
+
+        {/* Status Zone */}
+        {!showSolution && isWaitingOpponent && (
+          <div className="wero-card bg-wero-purple/10 border-wero-purple p-6 shadow-[4px_4px_0_0_#7B61FF]">
+            <p className="font-black uppercase text-xs text-wero-purple animate-pulse">L'adversaire réfléchit…</p>
+          </div>
+        )}
+
+        {!showSolution && isUserTurn && (
+          <div className="wero-card bg-gray-50 p-6 shadow-[4px_4px_0_0_#000]">
+            <p className="font-black uppercase text-xs text-gray-500 mb-2 border-b border-black/10 pb-1">À vous de jouer</p>
+            <p className="text-sm font-bold text-gray-800">Trouvez la réponse correcte pour cette position.</p>
+            {lastError && (
+              <div className="mt-4 p-3 bg-wero-salmon/10 border-2 border-wero-salmon rounded-xl text-wero-salmon font-black text-xs animate-bounce">
+                ✗ {lastError} n'est pas le bon coup.
+              </div>
+            )}
+          </div>
+        )}
+
+        {showSolution && expectedMove && (
+          <div className="wero-card bg-wero-yellow p-6 shadow-[4px_4px_0_0_#000] animate-in slide-in-from-bottom-4 duration-300">
+            <p className="text-[10px] font-black uppercase tracking-widest text-black/50 mb-2">Solution du Coach</p>
+            <div className="text-4xl font-black italic tracking-tighter mb-4">
+              {expectedMove.san}
+            </div>
+            {expectedMove.comment && (
+              <div
+                className="text-sm font-bold leading-relaxed text-black/80 mb-6"
+                dangerouslySetInnerHTML={{ __html: expectedMove.comment }}
+              />
+            )}
+            <button
+              onClick={onContinueAfterSolution}
+              className="wero-button bg-black text-white w-full"
+            >
+              Continuer →
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
