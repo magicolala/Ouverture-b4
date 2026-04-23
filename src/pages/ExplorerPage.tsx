@@ -267,25 +267,23 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
                   )}
 
                   {nextMoves.length === 0 && (
-                    <div className="flex flex-col gap-6 animate-in fade-in zoom-in duration-300">
-                      <div className="wero-card bg-green-50 border-green-500 p-6 shadow-[4px_4px_0_0_#15803d]">
-                        <p className="text-xl font-black uppercase tracking-tight text-green-800">Fin de variante ✓</p>
-                      </div>
-                      
-                      <LichessStats fen={fen} />
-
-                      <a
-                        href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="wero-button bg-black text-white text-center flex items-center justify-center gap-2"
-                      >
-                        <span>♞ Continuer sur Lichess</span>
-                      </a>
+                    <div className="wero-card bg-green-50 border-green-500 p-6 shadow-[4px_4px_0_0_#15803d] animate-in fade-in zoom-in duration-300">
+                      <p className="text-xl font-black uppercase tracking-tight text-green-800">Fin de variante ✓</p>
                     </div>
                   )}
                 </div>
               )}
+
+              <LichessStats fen={fen} />
+
+              <a
+                href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="wero-button bg-black text-white text-center flex items-center justify-center gap-2"
+              >
+                <span>♞ Continuer sur Lichess</span>
+              </a>
             </div>
           </div>
         </aside>
