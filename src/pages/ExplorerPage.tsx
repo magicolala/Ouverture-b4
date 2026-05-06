@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Chess, Move } from "chess.js";
 import { ChessboardPanel } from "../components/ChessboardPanel";
+import { BoardControls } from "../components/BoardControls";
 import { LichessStats } from "../components/LichessStats";
+import { Gamepad2 } from "lucide-react";
 import { computeThreats } from "../lib/threats";
 import { REPERTOIRE } from "../data/repertoire";
 import {
@@ -52,6 +54,26 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowLeft") {
+        handleUndo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chess, handleUndo]);
 
   const currentNormFen = normalizeFen(fen);
   const currentNode = tree.get(currentNormFen);
@@ -160,28 +182,18 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
             />
           </div>
           
-          <div className="mt-6 sm:mt-8 flex flex-row flex-wrap gap-2 sm:gap-4 justify-center">
-            <button
-              onClick={handleUndo}
-              disabled={chess.history().length === 0}
-              className="wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs bg-white disabled:opacity-50"
-            >
-              ⟲ Undo
-            </button>
-            <button
-              onClick={handleReset}
-              disabled={chess.history().length === 0}
-              className="wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs bg-white disabled:opacity-50"
-            >
-              ↻ Reset
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowThreats((v) => !v)}
-              className={`wero-button !px-3 sm:!px-6 !py-1.5 sm:!py-3 !text-[10px] sm:!text-xs ${showThreats ? 'bg-wero-salmon text-white' : 'bg-white'}`}
-            >
-              {showThreats ? "⚠ Threats ON" : "⚠ Show Threats"}
-            </button>
+          <div className="mt-6 sm:mt-8 w-full flex flex-col items-center">
+            <BoardControls
+              onStart={handleReset}
+              onPrev={handleUndo}
+              onNext={() => {}} // Not implemented for free explorer yet
+              onEnd={() => {}} // Not implemented for free explorer yet
+              canPrev={chess.history().length > 0}
+              canNext={false}
+              showThreats={showThreats}
+              onToggleThreats={() => setShowThreats((v) => !v)}
+              currentInfo={lastMove ? "Coup joué" : "Position Initiale"}
+            />
           </div>
         </div>
 

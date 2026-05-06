@@ -32,6 +32,7 @@ type Action =
   | { type: "FINISH_LEARN_LINE" } // LEARN → PRACTICE sur la même ligne
   | { type: "NEXT_LINE" } // Passer à la ligne suivante dans la queue
   | { type: "RESTART_LINE" } // Recommencer la ligne en cours
+  | { type: "GO_TO_MOVE"; moveIndex: number } // Aller à un index de coup spécifique
   | { type: "EXIT" };
 
 function initialState(): SessionState {
@@ -224,6 +225,33 @@ function reducer(state: SessionState, action: Action): SessionState {
       };
     }
 
+    case "GO_TO_MOVE": {
+      const line = state.queue[state.currentLineIndex];
+      if (!line) return state;
+      const moveIndex = action.moveIndex;
+      // Clamp the move index to valid range
+      const clampedIndex = Math.max(0, Math.min(moveIndex, line.moves.length));
+      
+      // Determine the phase based on the new move index
+      let phase: SessionPhase;
+      if (clampedIndex >= line.moves.length) {
+        phase = "line-complete";
+      } else if (state.mode === "practice" && !isWhiteMoveIndex(clampedIndex)) {
+        phase = "waiting-opponent";
+      } else {
+        phase = "playing";
+      }
+      
+      return {
+        ...state,
+        currentMoveIndex: clampedIndex,
+        attemptsOnCurrentMove: 0,
+        showSolution: false,
+        lastError: null,
+        phase,
+      };
+    }
+
     case "EXIT":
       return initialState();
 
@@ -274,6 +302,9 @@ export interface UseSessionResult {
   continueAfterSolution(): void;
   nextLine(): void;
   restartLine(): void;
+  goToNextMove(): void;
+  goToPreviousMove(): void;
+  goToMove(moveIndex: number): void;
   exit(): void;
 }
 
@@ -430,6 +461,22 @@ export function useSession(
     dispatch({ type: "RESTART_LINE" });
   }, []);
 
+  const goToMove = useCallback((moveIndex: number) => {
+    dispatch({ type: "GO_TO_MOVE", moveIndex });
+  }, []);
+
+  const goToNextMove = useCallback(() => {
+    if (currentLine && state.currentMoveIndex < currentLine.moves.length) {
+      dispatch({ type: "GO_TO_MOVE", moveIndex: state.currentMoveIndex + 1 });
+    }
+  }, [currentLine, state.currentMoveIndex]);
+
+  const goToPreviousMove = useCallback(() => {
+    if (state.currentMoveIndex > 0) {
+      dispatch({ type: "GO_TO_MOVE", moveIndex: state.currentMoveIndex - 1 });
+    }
+  }, [state.currentMoveIndex]);
+
   const exit = useCallback(() => {
     dispatch({ type: "EXIT" });
   }, []);
@@ -448,6 +495,9 @@ export function useSession(
     continueAfterSolution,
     nextLine,
     restartLine,
+    goToNextMove,
+    goToPreviousMove,
+    goToMove,
     exit,
   };
 }
