@@ -28,6 +28,48 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   const [lastMove, setLastMove] = useState<any>();
   const [showThreats, setShowThreats] = useState(true);
 
+  const handleMove = ({ from, to, promotion }: { from: string; to: string; promotion?: string }) => {
+    try {
+      const result = chess.move({ from, to, promotion: promotion || "q" });
+      if (result) {
+        setFen(chess.fen());
+        setLastMove({ from: result.from, to: result.to });
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  };
+
+  const handleSanClick = (san: string) => {
+    try {
+      const result = chess.move(san);
+      if (result) {
+        setFen(chess.fen());
+        setLastMove({ from: result.from, to: result.to });
+      }
+    } catch (e) {}
+  };
+
+  const handleUndo = () => {
+    const result = chess.undo();
+    if (result) {
+      setFen(chess.fen());
+      const history = chess.history({ verbose: true }) as Move[];
+      if (history.length > 0) {
+        const prev = history[history.length - 1];
+        setLastMove({ from: prev.from, to: prev.to });
+      } else {
+        setLastMove(undefined);
+      }
+    }
+  };
+
+  const handleReset = () => {
+    chess.reset();
+    setFen(chess.fen());
+    setLastMove(undefined);
+  };
+
   // Sync FEN to URL
   useEffect(() => {
     const currentFenInUrl = searchParams.get("fen");
@@ -123,48 +165,6 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   }, [fen, mainOccurrence, nextMoves, currentNode, showThreats]);
 
   const circlesToShow = mainOccurrence?.circles;
-
-  const handleMove = ({ from, to, promotion }: { from: string; to: string; promotion?: string }) => {
-    try {
-      const result = chess.move({ from, to, promotion: promotion || "q" });
-      if (result) {
-        setFen(chess.fen());
-        setLastMove({ from: result.from, to: result.to });
-        return true;
-      }
-    } catch (e) {}
-    return false;
-  };
-
-  const handleSanClick = (san: string) => {
-    try {
-      const result = chess.move(san);
-      if (result) {
-        setFen(chess.fen());
-        setLastMove({ from: result.from, to: result.to });
-      }
-    } catch (e) {}
-  };
-
-  const handleUndo = () => {
-    const result = chess.undo();
-    if (result) {
-      setFen(chess.fen());
-      const history = chess.history({ verbose: true }) as Move[];
-      if (history.length > 0) {
-        const prev = history[history.length - 1];
-        setLastMove({ from: prev.from, to: prev.to });
-      } else {
-        setLastMove(undefined);
-      }
-    }
-  };
-
-  const handleReset = () => {
-    chess.reset();
-    setFen(chess.fen());
-    setLastMove(undefined);
-  };
 
   return (
     <div className="min-h-screen p-4 sm:p-6">

@@ -182,19 +182,18 @@ export function ChessboardPanel({
   return (
     <div className="w-full max-w-[640px] mx-auto">
       <Chessboard
-        options={{
-          id,
-          position: fen,
-          boardOrientation: orientation,
-          allowDragging: !disabled,
-          allowDrawingArrows: true,
-          arrows: boardArrows,
-          squareStyles,
-          onPieceDrop: handleDrop,
-          onSquareClick: handleSquareClick,
-          animationDurationInMs: 200,
-          showNotation: true,
-        }}
+        id={id}
+        position={fen}
+        boardOrientation={orientation}
+        arePiecesDraggable={!disabled}
+        customArrows={boardArrows}
+        customSquareStyles={squareStyles}
+        onPieceDrop={(source, target, piece) => 
+          handleDrop({ sourceSquare: source, targetSquare: target, piece: { pieceType: piece } })
+        }
+        onSquareClick={(square) => handleSquareClick({ square })}
+        animationDuration={200}
+        showBoardNotation={true}
       />
     </div>
   );
