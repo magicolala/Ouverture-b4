@@ -16,14 +16,31 @@ body {
   font-family: var(--font-body);
   background-color: var(--color-wero-bg);
   background-image: 
-    radial-gradient(at 0% 0%, var(--bg-color-1, hsla(180, 100%, 90%, 1)) 0, transparent 50%), 
-    radial-gradient(at 100% 100%, var(--bg-color-2, hsla(250, 100%, 90%, 1)) 0, transparent 50%),
-    linear-gradient(to right, rgba(0,0,0,0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(0,0,0,0.03) 1px, transparent 1px);
-  background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    /* Grain Texture */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"),
+    /* Mesh Gradients */
+    radial-gradient(at 0% 0%, var(--bg-color-1, hsla(180, 100%, 90%, 1)) 0, transparent 60%), 
+    radial-gradient(at 100% 100%, var(--bg-color-2, hsla(250, 100%, 90%, 1)) 0, transparent 60%),
+    radial-gradient(at 100% 0%, var(--bg-color-3, hsla(320, 100%, 92%, 1)) 0, transparent 50%),
+    radial-gradient(at 0% 100%, var(--bg-color-4, hsla(50, 100%, 90%, 1)) 0, transparent 50%),
+    /* Grid */
+    linear-gradient(to right, rgba(0,0,0,0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0,0,0,0.04) 1px, transparent 1px);
+  background-size: 200px 200px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
   background-attachment: fixed;
   color: #000000;
   -webkit-font-smoothing: antialiased;
+  transition: background 0.8s ease-in-out;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 0%, var(--color-wero-bg) 100%);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: -1;
 }
 
 h1, h2, h3, h4, h5, h6 {

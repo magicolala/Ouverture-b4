@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { AdminPanel } from "./components/AdminPanel";
 import { useSession } from "./engine/useSession";
 import { REPERTOIRE } from "./data/repertoire";
@@ -14,21 +14,40 @@ import { DocumentationPage } from "./pages/DocumentationPage";
 
 export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
-  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Background randomization
+  // Background randomization on each navigation
   useEffect(() => {
     const palettes = [
-      { c1: "hsla(180, 100%, 90%, 1)", c2: "hsla(250, 100%, 90%, 1)" }, // Cyan/Purple
-      { c1: "hsla(10, 100%, 90%, 1)", c2: "hsla(50, 100%, 90%, 1)" },   // Salmon/Yellow
-      { c1: "hsla(140, 100%, 90%, 1)", c2: "hsla(210, 100%, 90%, 1)" }, // Lime/Blue
-      { c1: "hsla(320, 100%, 92%, 1)", c2: "hsla(180, 100%, 92%, 1)" }, // Pink/Cyan
-      { c1: "hsla(45, 100%, 90%, 1)", c2: "hsla(0, 100%, 90%, 1)" },    // Yellow/Red
+      { // Cyan/Purple/Blue
+        c1: "hsla(180, 100%, 92%, 1)", c2: "hsla(250, 100%, 92%, 1)",
+        c3: "hsla(210, 100%, 94%, 1)", c4: "hsla(280, 100%, 94%, 1)" 
+      },
+      { // Salmon/Yellow/Orange
+        c1: "hsla(10, 100%, 92%, 1)", c2: "hsla(50, 100%, 92%, 1)",
+        c3: "hsla(30, 100%, 94%, 1)", c4: "hsla(60, 100%, 94%, 1)"
+      },
+      { // Lime/Emerald/Teal
+        c1: "hsla(140, 100%, 92%, 1)", c2: "hsla(170, 100%, 92%, 1)",
+        c3: "hsla(155, 100%, 94%, 1)", c4: "hsla(190, 100%, 94%, 1)"
+      },
+      { // Pink/Rose/Indigo
+        c1: "hsla(330, 100%, 94%, 1)", c2: "hsla(260, 100%, 94%, 1)",
+        c3: "hsla(350, 100%, 96%, 1)", c4: "hsla(230, 100%, 96%, 1)"
+      },
+      { // Gold/Amber/Yellow
+        c1: "hsla(45, 100%, 92%, 1)", c2: "hsla(55, 100%, 92%, 1)",
+        c3: "hsla(40, 100%, 94%, 1)", c4: "hsla(65, 100%, 94%, 1)"
+      },
     ];
+    
     const palette = palettes[Math.floor(Math.random() * palettes.length)];
-    document.body.style.setProperty("--bg-color-1", palette.c1);
-    document.body.style.setProperty("--bg-color-2", palette.c2);
-  }, []);
+    const root = document.body;
+    root.style.setProperty("--bg-color-1", palette.c1);
+    root.style.setProperty("--bg-color-2", palette.c2);
+    root.style.setProperty("--bg-color-3", palette.c3);
+    root.style.setProperty("--bg-color-4", palette.c4);
+  }, [location.pathname]);
 
   // Validation du répertoire au démarrage (dev only).
   useEffect(() => {
