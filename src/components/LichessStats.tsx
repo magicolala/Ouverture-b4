@@ -63,12 +63,21 @@ export function LichessStats({ fen }: { fen: string }) {
         const res = await fetch(url, { headers });
         
         if (res.status === 401) {
-          if (isMounted) setIsUnauthorized(true);
+          if (isMounted) {
+            setIsUnauthorized(true);
+            setStats(null);
+          }
           setLoading(false);
           return;
         }
         
-        if (!res.ok) throw new Error('API error');
+        if (!res.ok) {
+          // If it's a 429 (Too Many Requests), we also treat it as a temporary failure
+          if (res.status === 429 && isMounted) {
+            setStats(null);
+          }
+          throw new Error(`API error: ${res.status}`);
+        }
         const data = await res.json();
         
         if (isMounted) {
@@ -197,7 +206,7 @@ export function LichessStats({ fen }: { fen: string }) {
               <p className="text-[10px] font-black uppercase text-black">Jeton API Requis</p>
             </div>
             <p className="text-[9px] text-gray-600 font-bold leading-tight mb-4">
-              Lichess a restreint son explorateur. Pour voir les stats, créez un jeton gratuit sur leur site.
+              Lichess restreint l'accès à son explorateur pour les utilisateurs anonymes. Pour voir les statistiques mondiales, créez un jeton gratuit (Personal Access Token) sur Lichess.
             </p>
             
             <div className="flex flex-col gap-2">

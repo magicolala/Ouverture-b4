@@ -26,6 +26,7 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   const [chess] = useState(() => new Chess(initialFen));
   const [fen, setFen] = useState(chess.fen());
   const [lastMove, setLastMove] = useState<any>();
+  const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showThreats, setShowThreats] = useState(true);
 
   const handleMove = ({ from, to, promotion }: { from: string; to: string; promotion?: string }) => {
@@ -34,6 +35,7 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
       if (result) {
         setFen(chess.fen());
         setLastMove({ from: result.from, to: result.to });
+        setRedoStack([]); // New move clears redo stack
         return true;
       }
     } catch (e) {}
@@ -46,20 +48,64 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
       if (result) {
         setFen(chess.fen());
         setLastMove({ from: result.from, to: result.to });
+        setRedoStack([]); // New move clears redo stack
       }
     } catch (e) {}
   };
 
   const handleUndo = () => {
+    const history = chess.history();
+    if (history.length === 0) return;
+    
+    const lastSan = history[history.length - 1];
     const result = chess.undo();
     if (result) {
       setFen(chess.fen());
-      const history = chess.history({ verbose: true }) as Move[];
-      if (history.length > 0) {
-        const prev = history[history.length - 1];
+      setRedoStack((prev) => [lastSan, ...prev]);
+      
+      const fullHistory = chess.history({ verbose: true }) as Move[];
+      if (fullHistory.length > 0) {
+        const prev = fullHistory[fullHistory.length - 1];
         setLastMove({ from: prev.from, to: prev.to });
       } else {
         setLastMove(undefined);
+      }
+    }
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const san = redoStack[0];
+    const result = chess.move(san);
+    if (result) {
+      setFen(chess.fen());
+      setLastMove({ from: result.from, to: result.to });
+      setRedoStack((prev) => prev.slice(1));
+    }
+  };
+
+  const handleGoToEnd = () => {
+    let changed = false;
+    while (redoStack.length > 0) {
+      const san = redoStack[0];
+      const result = chess.move(san);
+      if (result) {
+        setRedoStack((prev) => prev.slice(1));
+        changed = true;
+        if (redoStack.length === 1) { // last move
+           setLastMove({ from: result.from, to: result.to });
+        }
+      } else {
+        break;
+      }
+    }
+    if (changed) {
+      setFen(chess.fen());
+      // Re-calculate last move properly
+      const history = chess.history({ verbose: true }) as Move[];
+      if (history.length > 0) {
+        const last = history[history.length - 1];
+        setLastMove({ from: last.from, to: last.to });
       }
     }
   };
@@ -68,6 +114,7 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
     chess.reset();
     setFen(chess.fen());
     setLastMove(undefined);
+    setRedoStack([]);
   };
 
   // Sync FEN to URL
@@ -111,11 +158,13 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
 
       if (e.key === "ArrowLeft") {
         handleUndo();
+      } else if (e.key === "ArrowRight") {
+        handleRedo();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [chess, handleUndo]);
+  }, [chess, handleUndo, handleRedo]);
 
   const currentNormFen = normalizeFen(fen);
   const currentNode = tree.get(currentNormFen);
@@ -186,13 +235,13 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
             <BoardControls
               onStart={handleReset}
               onPrev={handleUndo}
-              onNext={() => {}} // Not implemented for free explorer yet
-              onEnd={() => {}} // Not implemented for free explorer yet
+              onNext={handleRedo}
+              onEnd={handleGoToEnd}
               canPrev={chess.history().length > 0}
-              canNext={false}
+              canNext={redoStack.length > 0}
               showThreats={showThreats}
               onToggleThreats={() => setShowThreats((v) => !v)}
-              currentInfo={lastMove ? "Coup joué" : "Position Initiale"}
+              currentInfo={lastMove ? "Analyse en cours" : "Position Initiale"}
             />
           </div>
         </div>
