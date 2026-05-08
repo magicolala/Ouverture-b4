@@ -37,7 +37,7 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
   const { state, currentLine, fen, lastMove, expectedMove } = session;
   const [showThreats, setShowThreats] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [isCourseSidebarOpen, setIsCourseSidebarOpen] = useState(true);
+  const [isCourseSidebarOpen, setIsCourseSidebarOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Détection mobile (lg breakpoint = 1024px)
@@ -55,8 +55,6 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
     // Sur mobile: sidebar fermé. Sur desktop: sidebar ouvert.
     if (isMobile) {
       setIsCourseSidebarOpen(false);
-    } else {
-      setIsCourseSidebarOpen(true);
     }
   }, [isMobile]);
 
@@ -363,8 +361,10 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
                     fen={fen}
                     expectedMove={expectedMove}
                     isLineComplete={state.phase === "line-complete"}
+                    hasNextLine={hasNextLineInQueue}
                     onAdvance={session.advanceLearn}
                     onFinishLine={session.finishLearnLine}
+                    onNextLine={session.nextLine}
                     onExit={onExit}
                   />
                 )}

@@ -9,8 +9,10 @@ interface LearnPanelProps {
   expectedMove: MoveAnnotation | null;
   /** True si la variante est terminée (currentMoveIndex === moves.length). */
   isLineComplete: boolean;
+  hasNextLine: boolean;
   onAdvance: () => void;
   onFinishLine: () => void;
+  onNextLine: () => void;
   onExit: () => void;
 }
 
@@ -26,8 +28,10 @@ export function LearnPanel({
   fen,
   expectedMove,
   isLineComplete,
+  hasNextLine,
   onAdvance,
   onFinishLine,
+  onNextLine,
   onExit,
 }: LearnPanelProps) {
   const totalMoves = line.moves.length;
@@ -128,6 +132,14 @@ export function LearnPanel({
               >
                 Passer à l'entraînement ✓
               </button>
+              {hasNextLine && (
+                <button
+                  onClick={onNextLine}
+                  className="wero-button bg-wero-yellow text-black"
+                >
+                  Cours suivant
+                </button>
+              )}
             </div>
           </div>
         )}
