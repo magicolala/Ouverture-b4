@@ -22,13 +22,20 @@ export function LichessStats({ fen }: { fen: string }) {
     topGames: Game[]
   } | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  const [isUnauthorized, setIsUnauthorized] = useState(!localStorage.getItem('lichess_token'));
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [token, setToken] = useState(localStorage.getItem('lichess_token') || '');
   const [isHidden, setIsHidden] = useState(localStorage.getItem('lichess_stats_hidden') === 'true');
 
   useEffect(() => {
     if (isHidden) return;
+
+    if (db === 'lichess' && !token.trim()) {
+      setLoading(false);
+      setStats(null);
+      setIsUnauthorized(true);
+      return;
+    }
     
     let isMounted = true;
     setLoading(true);
@@ -196,7 +203,7 @@ export function LichessStats({ fen }: { fen: string }) {
         </div>
       )}
 
-      {isUnauthorized && !loading && (
+      {db === 'lichess' && isUnauthorized && !loading && (
         <div className="bg-wero-cyan/5 border-2 border-black/10 p-4 rounded-xl mb-2 relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-16 h-16 bg-wero-cyan/10 rounded-full -mr-8 -mt-8 blur-2xl group-hover:bg-wero-cyan/20 transition-all"></div>
           

@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
-import type { Arrow } from "react-chessboard";
+import type { Arrow, PieceDropHandlerArgs } from "react-chessboard";
 import { Chess } from "chess.js";
 import type { MoveAnnotation } from "../data/repertoire";
 
@@ -107,11 +107,7 @@ export function ChessboardPanel({
     sourceSquare,
     targetSquare,
     piece,
-  }: {
-    sourceSquare: string;
-    targetSquare: string | null;
-    piece: { pieceType: string };
-  }): boolean => {
+  }: PieceDropHandlerArgs): boolean => {
     if (!targetSquare || disabled || !onMove) return false;
     
     // Reset de la sélection clic-clic lors d'un drag
@@ -182,18 +178,18 @@ export function ChessboardPanel({
   return (
     <div className="w-full max-w-[640px] mx-auto">
       <Chessboard
-        id={id}
-        position={fen}
-        boardOrientation={orientation}
-        arePiecesDraggable={!disabled}
-        customArrows={boardArrows}
-        customSquareStyles={squareStyles}
-        onPieceDrop={(source, target, piece) => 
-          handleDrop({ sourceSquare: source, targetSquare: target, piece: { pieceType: piece } })
-        }
-        onSquareClick={(square) => handleSquareClick({ square })}
-        animationDuration={200}
-        showBoardNotation={true}
+        options={{
+          id,
+          position: fen,
+          boardOrientation: orientation,
+          allowDragging: !disabled,
+          arrows: boardArrows,
+          squareStyles,
+          onPieceDrop: handleDrop,
+          onSquareClick: handleSquareClick,
+          animationDurationInMs: 200,
+          showNotation: true,
+        }}
       />
     </div>
   );

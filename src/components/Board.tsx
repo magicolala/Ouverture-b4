@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { renderPiece } from "./Pieces";
 import { cn } from "../utils";
 import { MoveAnnotation } from "../data/repertoire";
-import { Chess } from "chess.js";
+import { Chess, Square } from "chess.js";
 
 interface BoardProps {
   game: Chess;
@@ -150,7 +150,7 @@ export const Board: React.FC<BoardProps> = ({
             let isMoveTarget = false;
             let isCaptureTarget = false;
             if (selectedSquare) {
-              const moves = game.moves({ square: selectedSquare, verbose: true });
+              const moves = game.moves({ square: selectedSquare as Square, verbose: true });
               const move = (moves as any[]).find((m) => m.to === sq);
               if (move) {
                 isMoveTarget = true;
