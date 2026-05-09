@@ -232,7 +232,7 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
 
   return (
     <div className="min-h-screen p-3 sm:p-6">
-      <div className="max-w-[1600px] mx-auto">
+      <div className="max-w-[1680px] mx-auto">
         <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
           <button
             type="button"
@@ -436,7 +436,7 @@ function CourseSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-[340px] xl:w-[380px] shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
+    <aside className="w-full lg:w-[420px] xl:w-[460px] shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
       <div className="wero-card bg-white overflow-hidden h-full flex flex-col">
         <div className="p-4 border-b-[3px] border-black bg-wero-yellow flex items-center justify-between gap-3">
           <div className="min-w-0">
