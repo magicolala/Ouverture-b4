@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { lichessGameUrl } from '../utils';
 
 type Database = 'lichess' | 'masters';
 
@@ -329,7 +330,7 @@ export function LichessStats({ fen }: { fen: string }) {
               {stats.topGames.slice(0, 2).map((g) => (
                 <a 
                   key={g.id}
-                  href={`https://lichess.org/${g.id}`}
+                  href={lichessGameUrl(g.id)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block p-2 rounded-xl bg-gray-50 border-[2px] border-black/5 hover:border-black/20 transition-all group"

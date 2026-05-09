@@ -4,6 +4,7 @@ import { Chess, Move } from "chess.js";
 import { ChessboardPanel } from "../components/ChessboardPanel";
 import { BoardControls } from "../components/BoardControls";
 import { LichessStats } from "../components/LichessStats";
+import { lichessAnalysisUrl } from "../utils";
 import { Gamepad2 } from "lucide-react";
 import { computeThreats } from "../lib/threats";
 import { REPERTOIRE } from "../data/repertoire";
@@ -338,7 +339,7 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
               <LichessStats fen={fen} />
 
               <a
-                href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+                href={lichessAnalysisUrl(fen)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="wero-button bg-black text-white text-center flex items-center justify-center gap-2"
@@ -352,4 +353,3 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
     </div>
   );
 }
-

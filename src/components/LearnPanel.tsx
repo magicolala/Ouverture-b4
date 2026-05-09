@@ -1,5 +1,6 @@
 import type { RepertoireLine, MoveAnnotation } from "../data/repertoire";
 import { LichessStats } from "./LichessStats";
+import { lichessAnalysisUrl } from "../utils";
 
 interface LearnPanelProps {
   line: RepertoireLine;
@@ -119,7 +120,7 @@ export function LearnPanel({
 
             <div className="flex flex-col gap-3">
               <a
-                href={`https://lichess.org/analysis/${fen.replace(/ /g, "_")}`}
+                href={lichessAnalysisUrl(fen)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="wero-button bg-black text-white text-center flex items-center justify-center gap-2"
