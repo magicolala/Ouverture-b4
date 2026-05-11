@@ -450,8 +450,8 @@ function CourseSidebar({
   };
 
   return (
-    <aside className="w-full lg:w-[420px] xl:w-[460px] shrink-0 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)]">
-      <div className="wero-card bg-white overflow-hidden h-full flex flex-col">
+    <aside className="w-full lg:w-[420px] xl:w-[460px] shrink-0 lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:max-h-[calc(100vh-3rem)]">
+      <div className="wero-card bg-white overflow-hidden h-full min-h-0 flex flex-col">
         <div className="p-4 border-b-[3px] border-black bg-wero-yellow flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-widest text-black/60">
@@ -472,7 +472,7 @@ function CourseSidebar({
           </button>
         </div>
 
-        <div className="custom-scrollbar overflow-y-auto p-3 flex flex-col gap-3 lg:max-h-[calc(100vh-9rem)]">
+        <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-3 flex flex-col gap-3">
           {CHAPTERS.map((chapter) => {
             const isOpen = openChapters[chapter.id];
             const chapterLines = REPERTOIRE.filter(
