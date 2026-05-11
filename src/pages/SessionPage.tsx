@@ -27,6 +27,7 @@ import {
 import type { ChapterId, RepertoireLine } from "../data/repertoire";
 import { progressStore } from "../engine/progressStore";
 import type { SessionMode } from "../engine/types";
+import { useToast } from "../components/Toast";
 
 interface SessionPageProps {
   session: ReturnType<typeof useSession>;
@@ -35,6 +36,7 @@ interface SessionPageProps {
 
 export function SessionPage({ session, onExit }: SessionPageProps) {
   const { state, currentLine, fen, lastMove, expectedMove } = session;
+  const toast = useToast();
   const [showThreats, setShowThreats] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [isCourseSidebarOpen, setIsCourseSidebarOpen] = useState(false);
@@ -57,6 +59,18 @@ export function SessionPage({ session, onExit }: SessionPageProps) {
       setIsCourseSidebarOpen(false);
     }
   }, [isMobile]);
+
+  useEffect(() => {
+    if (state.phase === "line-complete") {
+      toast.success("Ligne terminée !", "Vous avez parcouru toute la variante.");
+    }
+  }, [state.phase]);
+
+  useEffect(() => {
+    if (state.mode === "practice" && state.currentMoveIndex === 0) {
+      toast.info("Mode Entraînement", "À vous de jouer les bons coups !");
+    }
+  }, [state.mode, state.currentMoveIndex]);
 
   useEffect(() => {
     if (state.queue.length === 0) {

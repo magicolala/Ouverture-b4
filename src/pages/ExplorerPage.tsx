@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useToast } from "../components/Toast";
 import { Link, useSearchParams } from "react-router-dom";
 import { Chess, Move } from "chess.js";
 import { ChessboardPanel } from "../components/ChessboardPanel";
@@ -21,6 +22,7 @@ interface ExplorerPageProps {
 
 export function ExplorerPage({ onExit }: ExplorerPageProps) {
   const tree = useMemo(() => buildExplorerTree(REPERTOIRE), []);
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialFen = searchParams.get("fen") || "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   
@@ -125,6 +127,12 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
       setSearchParams({ fen }, { replace: true });
     }
   }, [fen, setSearchParams, searchParams]);
+
+  useEffect(() => {
+    if (currentNode && nextMoves.length === 0) {
+      toast.success("Fin de variante !", "Vous avez atteint le bout de cette ligne.");
+    }
+  }, [currentNode?.fen, nextMoves.length]);
 
   // Raccourci clavier « X » pour basculer l'affichage des menaces.
   useEffect(() => {

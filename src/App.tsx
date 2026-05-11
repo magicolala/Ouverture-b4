@@ -12,8 +12,11 @@ import { SessionPage } from "./pages/SessionPage";
 import { ExplorerPage } from "./pages/ExplorerPage";
 import { DocumentationPage } from "./pages/DocumentationPage";
 
+import { ToastProvider } from "./components/Toast";
+
 export default function App() {
   const session = useSession({ opponentMoveDelayMs: 500 });
+  const navigate = useNavigate();
   const location = useLocation();
 
   // Background randomization on each navigation
@@ -73,39 +76,40 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <HomePage
-              onStart={handleStartSession}
-              onExplore={() => navigate("/explorer")}
-              onDocumentation={() => navigate("/documentation")}
-              onAdmin={() => navigate("/admin")}
-            />
-          }
-        />
-        <Route
-          path="/session"
-          element={
-            <SessionPage session={session} onExit={handleExitSession} />
-          }
-        />
-        <Route
-          path="/explorer"
-          element={<ExplorerPage onExit={() => navigate("/")} />}
-        />
-        <Route
-          path="/admin"
-          element={<AdminPanel onExit={() => navigate("/")} />}
-        />
-        <Route
-          path="/documentation"
-          element={<DocumentationPage onExit={() => navigate("/")} />}
-        />
-      </Routes>
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <HomePage
+                onStart={handleStartSession}
+                onExplore={() => navigate("/explorer")}
+                onDocumentation={() => navigate("/documentation")}
+                onAdmin={() => navigate("/admin")}
+              />
+            }
+          />
+          <Route
+            path="/session"
+            element={
+              <SessionPage session={session} onExit={handleExitSession} />
+            }
+          />
+          <Route
+            path="/explorer"
+            element={<ExplorerPage onExit={() => navigate("/")} />}
+          />
+          <Route
+            path="/admin"
+            element={<AdminPanel onExit={() => navigate("/")} />}
+          />
+          <Route
+            path="/documentation"
+            element={<DocumentationPage onExit={() => navigate("/")} />}
+          />
+        </Routes>
+      </div>
+    </ToastProvider>
   );
 }
-

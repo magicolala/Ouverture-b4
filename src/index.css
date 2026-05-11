@@ -84,5 +84,53 @@ button, a, input[type="button"], input[type="submit"] {
   border-radius: 10px;
 }
 
+/* Premium Toast System (Neo-Brutalist) */
+.toast-viewport {
+  @apply fixed bottom-6 right-6 z-[9999] flex flex-col gap-4 pointer-events-none;
+}
 
+.toast-card {
+  @apply pointer-events-auto relative min-w-[320px] max-w-[420px] bg-white border-[3px] border-black rounded-2xl p-4 flex gap-4 shadow-[8px_8px_0_0_#000] overflow-hidden animate-in slide-in-from-right-10 duration-300;
+}
 
+.toast-icon {
+  @apply flex-shrink-0 w-10 h-10 rounded-full border-[3px] border-black flex items-center justify-center;
+}
+
+.toast-content {
+  @apply flex-1 flex flex-col gap-1 pr-6;
+}
+
+.toast-title {
+  @apply font-black text-sm uppercase tracking-tight;
+}
+
+.toast-description {
+  @apply text-xs font-bold text-gray-600 leading-tight;
+}
+
+.toast-close {
+  @apply absolute top-3 right-3 text-black hover:scale-110 active:scale-95 transition-transform cursor-pointer;
+}
+
+.toast-progress {
+  @apply absolute bottom-0 left-0 h-2 bg-black;
+  animation: toast-progress linear forwards;
+}
+
+.toast-success .toast-icon { @apply bg-wero-yellow; }
+.toast-success .toast-progress { @apply bg-wero-yellow; }
+
+.toast-error .toast-icon { @apply bg-wero-salmon text-white; }
+.toast-error .toast-progress { @apply bg-wero-salmon; }
+
+.toast-warning .toast-icon { @apply bg-orange-400; }
+.toast-warning .toast-progress { @apply bg-orange-400; }
+
+.toast-info .toast-icon { @apply bg-wero-cyan; }
+.toast-info .toast-progress { @apply bg-wero-cyan; }
+
+@keyframes toast-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
