@@ -134,3 +134,14 @@ function staticExchange(
   }
   return gains[0];
 }
+
+/**
+ * Version simplifiée pour obtenir directement des objets Flèche {from, to, color: "red"}.
+ */
+export function computeThreatArrows(fen: string) {
+  return computeThreats(fen).map((t) => ({
+    from: t.from,
+    to: t.to,
+    color: "red" as const,
+  }));
+}

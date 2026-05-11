@@ -7,7 +7,7 @@ import { BoardControls } from "../components/BoardControls";
 import { LichessStats } from "../components/LichessStats";
 import { lichessAnalysisUrl } from "../utils";
 import { Gamepad2 } from "lucide-react";
-import { computeThreats } from "../lib/threats";
+import { computeThreatArrows } from "../lib/threats";
 import { REPERTOIRE } from "../data/repertoire";
 import {
   buildExplorerTree,
@@ -212,10 +212,7 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
       }
     }
     if (showThreats) {
-      const threats = computeThreats(fen);
-      for (const t of threats) {
-        arrows.push({ from: t.from, to: t.to, color: "red" });
-      }
+      arrows.push(...computeThreatArrows(fen));
     }
     return arrows.length > 0 ? arrows : undefined;
   }, [fen, mainOccurrence, nextMoves, currentNode, showThreats]);
