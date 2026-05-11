@@ -31,6 +31,9 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
   const [lastMove, setLastMove] = useState<any>();
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showThreats, setShowThreats] = useState(true);
+  const currentNormFen = normalizeFen(fen);
+  const currentNode = tree.get(currentNormFen);
+  const nextMoves = currentNode ? Object.values(currentNode.nextMoves) : [];
 
   const handleMove = ({ from, to, promotion }: { from: string; to: string; promotion?: string }) => {
     try {
@@ -175,9 +178,6 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [chess, handleUndo, handleRedo]);
 
-  const currentNormFen = normalizeFen(fen);
-  const currentNode = tree.get(currentNormFen);
-
   const mainOccurrence = currentNode?.occurrences.find((o) => o.comment);
   const chapterName = mainOccurrence
     ? getChapterTitle(mainOccurrence.chapterId)
@@ -195,8 +195,6 @@ export function ExplorerPage({ onExit }: ExplorerPageProps) {
         currentNode.occurrences[0].subchapterId
       )
     : null;
-
-  const nextMoves = currentNode ? Object.values(currentNode.nextMoves) : [];
 
   const arrowsToShow = useMemo(() => {
     const arrows: { from: string; to: string; color?: string }[] = [];

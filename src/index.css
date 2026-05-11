@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 @theme {
   --font-heading: "Outfit", sans-serif;
@@ -90,7 +90,8 @@ button, a, input[type="button"], input[type="submit"] {
 }
 
 .toast-card {
-  @apply pointer-events-auto relative min-w-[320px] max-w-[420px] bg-white border-[3px] border-black rounded-2xl p-4 flex gap-4 shadow-[8px_8px_0_0_#000] overflow-hidden animate-in slide-in-from-right-10 duration-300;
+  @apply pointer-events-auto relative min-w-[320px] max-w-[420px] bg-white border-[3px] border-black rounded-2xl p-4 flex gap-4 shadow-[8px_8px_0_0_#000] overflow-hidden;
+  animation: toast-slide-in 300ms ease-out;
 }
 
 .toast-icon {
@@ -133,4 +134,15 @@ button, a, input[type="button"], input[type="submit"] {
 @keyframes toast-progress {
   from { width: 100%; }
   to { width: 0%; }
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(2.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
